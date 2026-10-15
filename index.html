@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>Be present · 本初时间</title>
+  <style>
+    @font-face { font-family:"Instrument Serif"; src:url("assets/fonts/InstrumentSerif-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
+    :root { color-scheme: dark; font-family: Inter, "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif; background:#000; color:#f4f4f4; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100svh; background:#000; }
+    button, input, select { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible, input:focus-visible { outline:2px solid #ddd; outline-offset:5px; }
+    .page { min-height:100svh; display:flex; flex-direction:column; padding:36px 4.8vw 25px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+    .brand-name { font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:32px; line-height:1; letter-spacing:-.02em; margin:0; white-space:nowrap; }
+    .brand-chinese { color:#888; font-size:10px; letter-spacing:.24em; padding-left:1px; }
+    .actions { display:flex; align-items:center; gap:12px; }
+    .button { color:#aaa; background:transparent; border:1px solid #292929; border-radius:7px; padding:10px 15px; font-size:12px; transition:color .2s,border-color .2s; }
+    .button:hover { color:#fff; border-color:#777; }
+    .icon-button { width:37px; height:37px; padding:9px; }
+    .icon-button svg { width:17px; height:17px; }
+    #capture[aria-busy=true] { opacity:.5; cursor:wait; }
+    .hide-camera #capture { display:none; }
+    .capture-status { position:fixed; top:var(--capture-status-top,75svh); left:50%; z-index:100; width:max-content; max-width:calc(100vw - 44px); margin:0; padding:0; border:0; background:transparent; color:#78ce9a; font-size:clamp(12px,1vw,14px); line-height:1.6; font-weight:400; text-align:center; letter-spacing:.04em; opacity:0; transform:translate(-50%,calc(-50% + 12px)); transition:opacity .3s ease,transform .3s ease; pointer-events:none; }
+    .capture-status.is-visible { opacity:1; transform:translate(-50%,-50%); }
+    .capture-status[data-state=error] { color:#ed8080; }
+    .add-city { align-self:center; flex-shrink:0; display:grid; place-items:center; width:64px; height:64px; padding:0; margin-bottom:10px; border-radius:6px; font-size:32px; font-weight:300; line-height:1; }
+    main { flex:1; display:flex; flex-direction:column; justify-content:center; padding:65px 0 85px; }
+    .clock-scroll { flex-shrink:0; overflow-x:auto; scrollbar-color:#333 #000; scrollbar-width:thin; padding:14px 12px 24px; margin:-14px -12px -4px; overscroll-behavior-x:contain; }
+    .clocks { display:flex; flex-wrap:nowrap; gap:clamp(24px,4vw,75px); }
+    .clock-card { position:relative; flex:1 0 0; min-width:185px; text-align:center; cursor:grab; touch-action:pan-x; user-select:none; transition:transform .35s ease; }
+    .clock-card.dragging { cursor:grabbing; }
+    .is-exploring .clock-card { transform:scale(1.035); }
+    .dial { display:block; width:100%; max-width:260px; margin:0 auto; overflow:visible; }
+    .dial[data-numeral-position=outside] { max-width:320px; }
+    .dial .hour { stroke:#efefef; stroke-width:3; stroke-linecap:round; }
+    .dial .minute { stroke:#efefef; stroke-width:2; stroke-linecap:round; }
+    .dial .second { stroke:#777; stroke-width:1; stroke-linecap:round; }
+    .dial-numbers { fill:#929292; font-family:Inter,"Helvetica Neue",Arial,sans-serif; font-size:12px; font-weight:400; text-anchor:middle; dominant-baseline:central; }
+    .dial-numbers[data-position=outside] { font-size:16px; fill:#aaa; }
+    .hide-secondHand .second, .hide-numerals .dial-numbers { display:none; }
+    .city-line { display:flex; justify-content:center; align-items:center; gap:9px; }
+    .clock-label { height:33px; display:flex; align-items:center; justify-content:center; }
+    .city { margin:0; font-size:17px; font-weight:400; letter-spacing:.12em; }
+    .home { color:#888; font-size:9px; line-height:13px; letter-spacing:.1em; }
+    .country { font-size:10px; color:#747474; letter-spacing:.17em; margin:9px 0 22px; }
+    .digital { display:block; font-size:clamp(27px,3vw,43px); font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:.025em; }
+    .digital .seconds { color:#666; }
+    .time-area { position:relative; }
+    .digital { cursor:text; outline-offset:5px; }
+    .time-editor { display:flex; justify-content:center; align-items:center; gap:3px; font-size:clamp(27px,3vw,43px); font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:.025em; }
+    .time-editor input { width:2.2ch; min-width:0; padding:0; border:1px solid #444; border-radius:4px; background:#101010; color:#eee; font:inherit; text-align:center; line-height:1.15; }
+    .time-editor input[aria-invalid=true] { border-color:#ed8080; }
+    .time-editor .separator { color:#666; }
+    .clock-meta { position:relative; margin-top:13px; min-height:57px; }
+    .date { margin:0 0 19px; color:#858585; font-size:11px; letter-spacing:.06em; transition:opacity .3s ease; }
+    .zone { display:inline-block; color:#747474; font-size:10px; letter-spacing:.08em; transition:opacity .3s ease; }
+    .is-exploring .date, .is-exploring .zone { opacity:0; }
+    .day-change { position:absolute; top:5px; left:0; right:0; margin:0; font-size:15px; font-weight:500; line-height:24px; letter-spacing:.08em; opacity:0; transform:translateY(4px); transition:opacity .25s ease,transform .25s ease; pointer-events:none; }
+    .is-exploring .day-change:not(:empty) { opacity:1; transform:translateY(0); }
+    .day-change.future { color:#78ce9a; }
+    .day-change.past { color:#ed8080; }
+    .bottom-actions { position:relative; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .settings-toggle { position:fixed; right:4.8vw; bottom:35px; width:40px; height:40px; padding:10px; z-index:30; transition:opacity .2s,border-color .2s; }
+    .settings-toggle svg { width:18px; height:18px; display:block; }
+    .support-button { position:fixed; left:4.8vw; bottom:35px; width:40px; height:40px; display:grid; place-items:center; padding:9px; text-decoration:none; z-index:15; }
+    .support-button svg { width:20px; height:20px; }
+    .settings-panel { position:fixed; inset:0; width:100%; height:100svh; padding:40px 4.8vw 60px; overflow:auto; overscroll-behavior:contain; background:#000; border:0; z-index:50; }
+    .settings-heading { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; min-height:34px; max-width:1240px; margin:0 auto 44px; background:#000; box-shadow:0 -32px 0 20px #000; }
+    .settings-heading h2 { margin:0; font-size:24px; font-weight:400; letter-spacing:.08em; }
+    .customize-layout { display:grid; grid-template-columns:minmax(0,700px) minmax(220px,320px); gap:clamp(40px,7vw,110px); max-width:1240px; margin:0 auto; align-items:start; }
+    .customize-content { min-width:0; }
+    .developer-note { max-width:1240px; margin:48px auto 0; color:#777; font-size:12px; line-height:1.9; }
+    .developer-note a { color:#bbb; text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px; }
+    .developer-note a:hover { color:#fff; }
+    .settings-preview { position:sticky; top:76px; min-width:0; }
+    .settings-preview .clock-card { min-width:0; width:100%; cursor:default; touch-action:auto; transform:none!important; }
+    .settings-preview .digital { font-size:34px; cursor:default; }
+    .settings-preview .date,.settings-preview .zone { opacity:1; }
+    .settings-preview .day-change { display:none; }
+    .hide-date.hide-zone .settings-preview .clock-meta { display:none; }
+    .settings-language { display:grid; grid-template-columns:1fr 1fr; gap:16px 40px; padding-bottom:26px; margin-bottom:30px; border-bottom:1px solid #222; }
+    .language-field { display:flex; justify-content:space-between; align-items:center; gap:12px; color:#aaa; font-size:12px; min-height:28px; }
+    .settings-panel select { min-width:116px; max-width:55%; color:#ccc; background:#111; border:1px solid #333; border-radius:4px; padding:5px 8px; font-size:11px; }
+    .settings-columns { display:grid; grid-template-columns:1fr 1fr; gap:40px; }
+    .settings-columns fieldset { padding:0; margin:0; min-width:0; border:0; }
+    .settings-columns legend { padding:0; margin-bottom:14px; color:#666; font-size:11px; letter-spacing:.1em; }
+    .setting-row { min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:14px; color:#bbb; font-size:13px; cursor:pointer; }
+    .setting-row small { display:block; color:#686868; font-size:10px; line-height:16px; }
+    .clock-options { margin:0 0 8px 5px; padding-left:12px; border-left:1px solid #292929; }
+    .clock-options .setting-row, .clock-options .language-field { font-size:12px; color:#929292; min-height:36px; }
+    .clock-options select { min-width:80px; }
+    .numeral-options { margin:0 0 4px 5px; padding-left:10px; border-left:1px solid #252525; }
+    .numeral-options .language-field { gap:8px; }
+    .clock-options .numeral-options select { min-width:70px; max-width:65%; }
+    .setting-row small[hidden] { display:none; }
+    .settings-panel input[type=checkbox] { appearance:none; flex-shrink:0; position:relative; width:28px; height:16px; padding:0; margin:0; border:1px solid #3c3c3c; border-radius:10px; background:#171717; cursor:pointer; transition:background .2s; }
+    .settings-panel input[type=checkbox]::after { content:''; position:absolute; width:10px; height:10px; top:2px; left:2px; border-radius:50%; background:#777; transition:transform .2s,background .2s; }
+    .settings-panel input[type=checkbox]:checked { background:#ddd; border-color:#ddd; }
+    .settings-panel input[type=checkbox]:checked::after { transform:translateX(12px); background:#111; }
+    .settings-open > :not(.settings-panel) { visibility:hidden; }
+    .hide-settings:not(.reveal-bottom):not(.settings-open) #settings-toggle,
+    .hide-add:not(.reveal-bottom) #add,
+    .hide-fullscreen:not(.reveal-top) #fullscreen { opacity:0; pointer-events:none; }
+    #settings-toggle:focus-visible, #add:focus-visible, #fullscreen:focus-visible { opacity:1!important; pointer-events:auto!important; }
+    .hide-title .brand { visibility:hidden; }
+    .hide-support .support-button { display:none; }
+    .hide-analog .dial, .hide-city .city-line, .hide-city .clock-label, .hide-country .country,
+    .hide-digital .digital, .hide-date .date, .hide-zone .zone { display:none; }
+    .hide-digital .time-area { display:none; }
+    .hide-date.hide-zone:not(.is-exploring) .clock-meta { display:none; }
+    .hide-date .clock-meta { min-height:24px; }
+    .hide-date.is-exploring .clock-meta { min-height:42px; }
+    .translation-line { display:block; }
+    .city { min-height:calc(20px + (var(--language-count,1) - 1)*16px); }
+    .city .translation-line { line-height:20px; }
+    .city .translation-line + .translation-line { color:#888; font-size:11px; line-height:16px; letter-spacing:.03em; }
+    .country { min-height:calc(var(--language-count,1)*16px); }
+    .country .translation-line { line-height:16px; }
+    .country .translation-line + .translation-line { color:#666; }
+    .date .translation-line { line-height:18px; }
+    .clock-meta { min-height:calc(57px + (var(--language-count,1) - 1)*18px); }
+    [hidden] { display:none!important; }
+    .remove { position:absolute; top:-9px; right:0; border:0; background:#000; color:#888; opacity:0; padding:5px 8px; }
+    .clock-card:hover .remove,.remove:focus-visible { opacity:1; }
+    dialog { width:min(420px,calc(100vw - 40px)); color:#eee; background:#0b0b0b; border:1px solid #333; border-radius:12px; padding:26px; }
+    dialog::backdrop { background:#000b; backdrop-filter:blur(5px); }
+    .dialog-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .dialog-head h2 { font-size:18px; font-weight:400; margin:0; }
+    .close { background:none; color:#999; border:0; font-size:24px; }
+    input { width:100%; background:#111; color:#fff; border:1px solid #333; border-radius:6px; padding:12px; }
+    .city-options { margin-top:14px; max-height:300px; overflow:auto; }
+    .city-option { display:flex; justify-content:space-between; width:100%; background:none; color:#ddd; border:0; border-bottom:1px solid #202020; padding:15px 3px; text-align:left; }
+    .city-option:hover { color:#fff; background:#171717; }
+    .city-option span { color:#777; font-size:11px; }
+    .empty { color:#888; font-size:12px; line-height:1.8; }
+    @media (min-width:1500px) { .page { padding-inline:max(5vw,calc((100vw - 1500px)/2)); } }
+    @media (max-width:700px) { .page { padding:25px 22px 20px; } main { padding:65px 0 50px; } .clocks { gap:28px; } .clock-card { min-width:170px; } .digital { font-size:30px; } .brand-name { font-size:28px; } }
+    @media (max-width:1000px) { .customize-layout { grid-template-columns:minmax(0,1fr) 240px; gap:44px; } .settings-columns,.settings-language { grid-template-columns:1fr; gap:28px; } .settings-language { gap:14px; } }
+    @media (max-width:700px) { .settings-toggle { right:22px; bottom:32px; } .settings-panel { padding:26px 22px 44px; } .settings-heading { margin-bottom:30px; } .settings-heading h2 { font-size:20px; } .customize-layout { grid-template-columns:minmax(0,1fr) minmax(100px,38%); gap:24px; } .setting-row { font-size:12px; } .setting-row small { font-size:9px; } .language-field { font-size:11px; } .settings-panel select { min-width:75px; font-size:10px; padding:6px 4px; } .clock-options .setting-row,.clock-options .language-field { font-size:11px; } .settings-preview .digital { font-size:clamp(17px,4.7vw,28px); } .settings-preview .city { font-size:13px; } .settings-preview .country { margin-bottom:14px; font-size:9px; } .settings-preview .date { font-size:9px; } .settings-preview .zone { font-size:9px; } .settings-preview .clock-label { height:26px; } .settings-preview .home { font-size:8px; } }
+    @media (max-width:700px) { .support-button { left:22px; bottom:32px; } .settings-open .support-button { display:none; } .time-editor { font-size:30px; } }
+    @media (max-width:700px) { .settings-preview { top:64px; } }
+    @media (hover:none) { .remove { opacity:1; } }
+    @media (prefers-reduced-motion:reduce) { * { transition:none!important; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand"><h1 class="brand-name">Be present</h1><span class="brand-chinese">本初时间</span></div>
+      <div class="actions"><button class="button icon-button" id="capture" aria-label="复制完整截图" title="复制完整截图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h4l1.5-2h5L16 6h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></button><button class="button icon-button" id="fullscreen" aria-label="进入全屏" title="全屏"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
+    </header>
+    <main>
+      <div class="clock-scroll" role="region" aria-label="世界时钟，可横向滚动" tabindex="0"><div class="clocks" id="clocks"></div></div>
+    </main>
+    <div class="bottom-actions"><button class="button add-city" id="add" aria-label="添加城市"><span aria-hidden="true">＋</span></button></div>
+    <a class="button support-button" id="support" href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h12v7a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5zM17 9h2a3 3 0 0 1 0 6h-2M4 22h15M8 3v2m4-3v3m4-2v2"/></svg></a>
+    <button class="button settings-toggle" id="settings-toggle" aria-label="自定义" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="m9.5 3-.7 2.5-2.3 1L4 6l-1.5 2.5L4.3 11v2L2.5 15.5 4 18l2.5-.5 2.3 1 .7 2.5h5l.7-2.5 2.3-1 2.5.5 1.5-2.5-1.8-2.5v-2l1.8-2.5L20 6l-2.5.5-2.3-1-.7-2.5z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    <section class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1" hidden>
+      <div class="settings-heading"><h2 id="settings-title" data-i18n="settings">自定义</h2><button class="close" id="settings-close" aria-label="关闭自定义">×</button></div>
+      <div class="customize-layout"><div class="customize-content">
+      <div class="settings-language">
+        <label class="language-field"><span data-i18n="language">语言</span><select id="primary-language" aria-label="语言"></select></label>
+        <label class="setting-row"><span data-i18n="multilingual">多语言显示</span><input type="checkbox" role="switch" id="multilingual"></label>
+        <label class="language-field" id="secondary-field" hidden><span data-i18n="secondLanguage">第二语言</span><select id="secondary-language" aria-label="第二语言"></select></label>
+        <label class="language-field" id="third-field" hidden><span data-i18n="thirdLanguage">第三语言</span><select id="third-language" aria-label="第三语言"></select></label>
+      </div>
+      <div class="settings-columns">
+        <fieldset><legend data-i18n="clockContent">时间</legend>
+          <label class="setting-row"><span data-i18n="analog">时钟</span><input type="checkbox" role="switch" data-enabled="analog" aria-controls="clock-options"></label>
+          <div class="clock-options" id="clock-options">
+            <label class="setting-row"><span data-i18n="secondHand">秒针</span><input type="checkbox" role="switch" data-enabled="secondHand"></label>
+            <label class="setting-row"><span data-i18n="numerals">表盘数字</span><input type="checkbox" role="switch" data-enabled="numerals" aria-controls="numeral-options"></label>
+            <div class="numeral-options" id="numeral-options">
+              <label class="language-field" id="numeral-count-field"><span data-i18n="numeralCount">数量</span><select id="numeral-count" aria-label="数量"><option value="4" data-i18n="fourNumerals">4 个</option><option value="12" data-i18n="twelveNumerals">12 个</option></select></label>
+              <label class="language-field"><span data-i18n="numeralPosition">位置</span><select id="numeral-position" aria-label="位置"><option value="outside" data-i18n="outside">外部</option><option value="inside" data-i18n="inside">内部</option></select></label>
+            </div>
+          </div>
+          <label class="setting-row"><span data-i18n="city">城市</span><input type="checkbox" role="switch" data-enabled="city"></label>
+          <label class="setting-row"><span data-i18n="country">国家</span><input type="checkbox" role="switch" data-enabled="country"></label>
+          <label class="setting-row"><span data-i18n="digital">数字时钟</span><input type="checkbox" role="switch" data-enabled="digital"></label>
+          <label class="setting-row"><span data-i18n="date">日期</span><input type="checkbox" role="switch" data-enabled="date"></label>
+          <label class="setting-row"><span data-i18n="zone">时区</span><input type="checkbox" role="switch" data-enabled="zone"></label>
+        </fieldset>
+        <fieldset><legend data-i18n="pageControls">页面控件</legend>
+          <label class="setting-row"><span><span data-i18n="customizeButton">自定义按钮</span><small data-i18n="bottomHint" data-hint="settings" hidden>（鼠标移到底部时显示）</small></span><input type="checkbox" role="switch" data-enabled="settings"></label>
+          <label class="setting-row"><span><span data-i18n="addButton">加号按钮</span><small data-i18n="bottomHint" data-hint="add" hidden>（鼠标移到底部时显示）</small></span><input type="checkbox" role="switch" data-enabled="add"></label>
+          <label class="setting-row"><span><span data-i18n="fullscreenButton">全屏按钮</span><small data-i18n="topHint" data-hint="fullscreen" hidden>（鼠标移到顶部时显示）</small></span><input type="checkbox" role="switch" data-enabled="fullscreen"></label>
+          <label class="setting-row"><span data-i18n="cameraButton">相机按钮</span><input type="checkbox" role="switch" data-enabled="camera"></label>
+          <label class="setting-row"><span data-i18n="title">标题</span><input type="checkbox" role="switch" data-enabled="title"></label>
+          <label class="setting-row"><span data-i18n="supportButton">赞助按钮</span><input type="checkbox" role="switch" data-enabled="support"></label>
+        </fieldset>
+      </div>
+      </div><aside class="settings-preview" id="settings-preview" aria-label="当地时间预览"></aside></div>
+      <p class="developer-note"><span data-i18n="developerBefore">如果你喜欢这个时钟，不妨点击</span><a href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" data-i18n="developerLink">这里</a><span data-i18n="developerAfter">来看一下开发者是谁吧</span></p>
+    </section>
+  </div>
+  <div class="capture-status" id="capture-status" role="status" hidden></div>
+  <dialog id="picker"><div class="dialog-head"><h2>添加一个城市</h2><button class="close" id="close-picker" aria-label="关闭">×</button></div><input id="search" placeholder="搜索城市或时区，例如：伦敦、Tokyo" aria-label="搜索城市或时区"><div class="city-options" id="options"></div></dialog>
+  <script src="assets/vendor/html-to-image-1.11.13.js"></script>
+  <script>
+    const defaults = [
+      { id:'paris', name:'巴黎', country:'法国', zone:'Europe/Paris' },
+      { id:'waterloo', name:'滑铁卢', country:'加拿大', zone:'America/Toronto' },
+      { id:'new-york', name:'纽约', country:'美国', zone:'America/New_York' },
+      { id:'beijing', name:'北京', country:'中国', zone:'Asia/Shanghai' }
+    ];
+    const more = [
+      { id:'london',name:'伦敦',country:'英国',zone:'Europe/London' },
+      { id:'tokyo',name:'东京',country:'日本',zone:'Asia/Tokyo' },
+      { id:'singapore',name:'新加坡',country:'新加坡',zone:'Asia/Singapore' },
+      { id:'los-angeles',name:'洛杉矶',country:'美国',zone:'America/Los_Angeles' },
+      { id:'vancouver',name:'温哥华',country:'加拿大',zone:'America/Vancouver' },
+      { id:'sydney',name:'悉尼',country:'澳大利亚',zone:'Australia/Sydney' },
+      { id:'hong-kong',name:'香港',country:'中国',zone:'Asia/Hong_Kong' },
+      { id:'dubai',name:'迪拜',country:'阿联酋',zone:'Asia/Dubai' }
+    ];
+    const catalog = [...defaults,...more];
+    if (typeof Intl.supportedValuesOf === 'function') {
+      for (const zone of Intl.supportedValuesOf('timeZone')) {
+        if (!catalog.some(city => city.zone === zone)) catalog.push({ id:zone, name:zone.split('/').pop().replaceAll('_',' '), country:'', zone });
+      }
+    }
+    let cities = defaults.slice();
+    try { const saved = JSON.parse(localStorage.getItem('moment-cities')); if (Array.isArray(saved) && saved.length && saved.every(id => catalog.some(c => c.id === id))) cities = [...new Set(saved)].map(id => catalog.find(c => c.id === id)); } catch {}
+    const container = document.getElementById('clocks');
+    const picker = document.getElementById('picker');
+    const search = document.getElementById('search');
+    const options = document.getElementById('options');
+    const page = document.querySelector('.page');
+    let previewTimestamp = null;
+    let previewAnchorCityId = null;
+    let wheelRemainder = 0;
+    let wheelCityId = null;
+    let activeDrag = null;
+    let timeEdit = null;
+    const settingsPanel=document.getElementById('settings-panel');
+    const settingsToggle=document.getElementById('settings-toggle');
+    const settingsPreview=document.getElementById('settings-preview');
+    const localZone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris';
+    let previewCity=null;
+    let previousBodyOverflow='';
+    const languageOptions={zh:'简体中文',en:'English',fr:'Français'};
+    const locales={zh:'zh-CN',en:'en-GB',fr:'fr-FR'};
+    const messages={
+      zh:{settings:'自定义',closeSettings:'关闭自定义',language:'语言',multilingual:'多语言显示',secondLanguage:'第二语言',thirdLanguage:'第三语言',none:'不显示',clockContent:'时间',pageControls:'页面控件',analog:'时钟',city:'城市',country:'国家',digital:'数字时钟',date:'日期',zone:'时区',customizeButton:'自定义按钮',addButton:'加号按钮',fullscreenButton:'全屏按钮',title:'标题',bottomHint:'（鼠标移到底部时显示）',topHint:'（鼠标移到顶部时显示）',local:'当地时间',add:'添加城市',addTitle:'添加一个城市',close:'关闭',search:'搜索城市或时区，例如：伦敦、Tokyo',noResults:'没有找到可添加的城市，请尝试其他名称或时区。',fullscreen:'进入全屏',exitFullscreen:'退出全屏',fullscreenUnavailable:'当前浏览器不支持全屏',nextDay:'明天',previousDay:'昨天',daysAfter:'{n} 天后',daysBefore:'{n} 天前',nextDate:'次日',previousDate:'前日',remove:'移除 {city}',clockInstructions:'{city}时钟，上下拖动或滚轮调整时间，方向键按五分钟刻度调整',clockRegion:'世界时钟，可横向滚动'},
+      en:{settings:'Customize',closeSettings:'Close customization',language:'Language',multilingual:'Multiple languages',secondLanguage:'Second language',thirdLanguage:'Third language',none:'None',clockContent:'Time',pageControls:'Page controls',analog:'Clock',city:'City',country:'Country',digital:'Digital clock',date:'Date',zone:'Time zone',customizeButton:'Customize button',addButton:'Add button',fullscreenButton:'Fullscreen button',title:'Title',bottomHint:'(Shown when the pointer moves to the bottom)',topHint:'(Shown when the pointer moves to the top)',local:'Local time',add:'Add city',addTitle:'Add a city',close:'Close',search:'Search a city or time zone, e.g. London, Tokyo',noResults:'No cities found. Try another name or time zone.',fullscreen:'Enter fullscreen',exitFullscreen:'Exit fullscreen',fullscreenUnavailable:'Fullscreen is unavailable in this browser',nextDay:'Tomorrow',previousDay:'Yesterday',daysAfter:'{n} days later',daysBefore:'{n} days earlier',nextDate:'next day',previousDate:'previous day',remove:'Remove {city}',clockInstructions:'{city} clock. Drag or scroll vertically to adjust time. Arrow keys adjust on five-minute marks.',clockRegion:'World clocks, scroll horizontally'},
+      fr:{settings:'Personnaliser',closeSettings:'Fermer la personnalisation',language:'Langue',multilingual:'Affichage multilingue',secondLanguage:'Deuxième langue',thirdLanguage:'Troisième langue',none:'Aucune',clockContent:'Heure',pageControls:'Commandes de la page',analog:'Horloge',city:'Ville',country:'Pays',digital:'Heure numérique',date:'Date',zone:'Fuseau horaire',customizeButton:'Bouton de personnalisation',addButton:'Bouton +',fullscreenButton:'Bouton plein écran',title:'Titre',bottomHint:'(Visible en déplaçant la souris vers le bas)',topHint:'(Visible en déplaçant la souris vers le haut)',local:'Heure locale',add:'Ajouter une ville',addTitle:'Ajouter une ville',close:'Fermer',search:'Rechercher une ville ou un fuseau, ex. Paris, Tokyo',noResults:'Aucune ville trouvée. Essayez un autre nom ou fuseau.',fullscreen:'Activer le plein écran',exitFullscreen:'Quitter le plein écran',fullscreenUnavailable:'Le plein écran est indisponible',nextDay:'Demain',previousDay:'Hier',daysAfter:'{n} jours après',daysBefore:'{n} jours avant',nextDate:'lendemain',previousDate:'veille',remove:'Supprimer {city}',clockInstructions:'Horloge de {city}. Glisser ou faire défiler verticalement pour régler l’heure. Les flèches suivent les repères de cinq minutes.',clockRegion:'Horloges du monde, défilement horizontal'}
+    };
+    Object.assign(messages.zh,{hours:'小时',minutes:'分钟',seconds:'秒钟',editTime:'编辑 {city} 时间'});
+    Object.assign(messages.en,{hours:'Hours',minutes:'Minutes',seconds:'Seconds',editTime:'Edit time in {city}'});
+    Object.assign(messages.fr,{hours:'Heures',minutes:'Minutes',seconds:'Secondes',editTime:'Modifier l’heure de {city}'});
+    Object.assign(messages.zh,{secondHand:'秒针',numerals:'表盘数字',numeralCount:'数量',fourNumerals:'4 个',twelveNumerals:'12 个',supportButton:'赞助按钮'});
+    Object.assign(messages.en,{secondHand:'Second hand',numerals:'Dial numbers',numeralCount:'Count',fourNumerals:'4 numbers',twelveNumerals:'12 numbers',supportButton:'Support button'});
+    Object.assign(messages.fr,{secondHand:'Trotteuse',numerals:'Chiffres du cadran',numeralCount:'Nombre',fourNumerals:'4 chiffres',twelveNumerals:'12 chiffres',supportButton:'Bouton de soutien'});
+    Object.assign(messages.zh,{numeralPosition:'位置',outside:'外部',inside:'内部'});
+    Object.assign(messages.en,{numeralPosition:'Position',outside:'Outside',inside:'Inside'});
+    Object.assign(messages.fr,{numeralPosition:'Position',outside:'Extérieur',inside:'Intérieur'});
+    Object.assign(messages.zh,{cameraButton:'相机按钮',capture:'复制完整截图',captureCopied:'截图已复制到剪贴板',captureUnsupported:'当前浏览器不支持图片复制',captureFailed:'复制失败，请允许剪贴板访问后重试'});
+    Object.assign(messages.en,{cameraButton:'Camera button',capture:'Copy full screenshot',captureCopied:'Screenshot copied to clipboard',captureUnsupported:'This browser does not support copying images',captureFailed:'Copy failed. Allow clipboard access and try again.'});
+    Object.assign(messages.fr,{cameraButton:'Bouton photo',capture:'Copier la capture complète',captureCopied:'Capture copiée dans le presse-papiers',captureUnsupported:'Ce navigateur ne permet pas de copier des images',captureFailed:'Copie impossible. Autorisez le presse-papiers puis réessayez.'});
+    Object.assign(messages.zh,{localPreview:'当地时间预览'});
+    Object.assign(messages.en,{localPreview:'Local time preview'});
+    Object.assign(messages.fr,{localPreview:'Aperçu de l’heure locale'});
+    Object.assign(messages.zh,{developerBefore:'如果你喜欢这个时钟，不妨点击',developerLink:'这里',developerAfter:'来看一下开发者是谁吧'});
+    Object.assign(messages.en,{developerBefore:'If you like this clock, click ',developerLink:'here',developerAfter:' to meet the developer.'});
+    Object.assign(messages.fr,{developerBefore:'Si cette horloge vous plaît, cliquez ',developerLink:'ici',developerAfter:' pour découvrir son créateur.'});
+    const cityNames={
+      paris:{zh:'巴黎',en:'Paris',fr:'Paris',region:'FR'},
+      waterloo:{zh:'滑铁卢',en:'Waterloo',fr:'Waterloo',region:'CA'},
+      'new-york':{zh:'纽约',en:'New York',fr:'New York',region:'US'},
+      beijing:{zh:'北京',en:'Beijing',fr:'Pékin',region:'CN'},
+      london:{zh:'伦敦',en:'London',fr:'Londres',region:'GB'},
+      tokyo:{zh:'东京',en:'Tokyo',fr:'Tokyo',region:'JP'},
+      singapore:{zh:'新加坡',en:'Singapore',fr:'Singapour',region:'SG'},
+      'los-angeles':{zh:'洛杉矶',en:'Los Angeles',fr:'Los Angeles',region:'US'},
+      vancouver:{zh:'温哥华',en:'Vancouver',fr:'Vancouver',region:'CA'},
+      sydney:{zh:'悉尼',en:'Sydney',fr:'Sydney',region:'AU'},
+      'hong-kong':{zh:'香港',en:'Hong Kong',fr:'Hong Kong',region:'CN'},
+      dubai:{zh:'迪拜',en:'Dubai',fr:'Dubaï',region:'AE'}
+    };
+    const enabledKeys=['analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','title','support'];
+    const settings={version:2,language:'zh',multilingual:false,secondLanguage:'en',thirdLanguage:'',enabled:Object.fromEntries(enabledKeys.map(key=>[key,true])),numeralCount:12,numeralPosition:'outside'};
+    try {
+      const saved=JSON.parse(localStorage.getItem('be-present-settings'));
+      if (saved && typeof saved==='object') {
+        for (const key of ['language','secondLanguage']) if (Object.hasOwn(languageOptions,saved[key])) settings[key]=saved[key];
+        if (saved.thirdLanguage==='' || Object.hasOwn(languageOptions,saved.thirdLanguage)) settings.thirdLanguage=saved.thirdLanguage;
+        if (typeof saved.multilingual==='boolean') settings.multilingual=saved.multilingual;
+        for (const key of enabledKeys) {
+          if (typeof saved.enabled?.[key]==='boolean') settings.enabled[key]=saved.enabled[key];
+          else if (typeof saved.hide?.[key]==='boolean') settings.enabled[key]=!saved.hide[key];
+        }
+        if ([4,12].includes(saved.numeralCount)) settings.numeralCount=saved.numeralCount;
+        if (['outside','inside'].includes(saved.numeralPosition)) settings.numeralPosition=saved.numeralPosition;
+      }
+    } catch {}
+    const localizedDates=new Map();
+    const regionNames=new Map(Object.keys(locales).map(lang=>[lang,new Intl.DisplayNames([locales[lang]],{type:'region'})]));
+    function t(key, language=settings.language) { return messages[language]?.[key] ?? messages.zh[key] ?? key; }
+    function cityName(city,language=settings.language) { return cityNames[city.id]?.[language] ?? city.name; }
+    function countryName(city,language) { const region=cityNames[city.id]?.region; return region ? regionNames.get(language).of(region) : city.country; }
+    function displayLanguages() { return [...new Set([settings.language,...(settings.multilingual?[settings.secondLanguage,settings.thirdLanguage]:[])].filter(Boolean))]; }
+    function localizedDate(zone,language,date) {
+      const key=`${zone}:${language}`;
+      if (!localizedDates.has(key)) localizedDates.set(key,new Intl.DateTimeFormat(locales[language],{timeZone:zone,month:'long',day:'numeric',weekday:'long'}));
+      return localizedDates.get(key).format(date);
+    }
+    function renderLines(element,lines) {
+      const key=JSON.stringify(lines);
+      if (element.dataset.lines===key) return;
+      element.dataset.lines=key;
+      element.replaceChildren(...lines.map(text=>{const span=document.createElement('span');span.className='translation-line';span.textContent=text;return span;}));
+    }
+    function dayMessage(delta) {
+      return delta>0?t('nextDay'):delta<0?t('previousDay'):'';
+    }
+    function normalizeLanguages() {
+      if (settings.secondLanguage===settings.language) settings.secondLanguage=Object.keys(languageOptions).find(lang=>lang!==settings.language);
+      if ([settings.language,settings.secondLanguage].includes(settings.thirdLanguage)) settings.thirdLanguage='';
+    }
+    function fillLanguageSelect(id,value,excluded,optional=false) {
+      const select=document.getElementById(id);select.replaceChildren();
+      const entries=Object.entries(languageOptions);
+      if (optional) entries.unshift(['',t('none')]);
+      for (const [language,name] of entries) {
+        if (excluded.includes(language)) continue;
+        const option=document.createElement('option');option.value=language;option.textContent=name;select.append(option);
+      }
+      select.value=value;
+    }
+    function updateLanguageUI() {
+      document.documentElement.lang=locales[settings.language];
+      for (const element of document.querySelectorAll('[data-i18n]')) element.textContent=t(element.dataset.i18n);
+      document.getElementById('primary-language').setAttribute('aria-label',t('language'));
+      document.getElementById('secondary-language').setAttribute('aria-label',t('secondLanguage'));
+      document.getElementById('third-language').setAttribute('aria-label',t('thirdLanguage'));
+      fillLanguageSelect('primary-language',settings.language,[]);
+      fillLanguageSelect('secondary-language',settings.secondLanguage,[settings.language]);
+      fillLanguageSelect('third-language',settings.thirdLanguage,[settings.language,settings.secondLanguage],true);
+      document.getElementById('multilingual').checked=settings.multilingual;
+      document.getElementById('secondary-field').hidden=!settings.multilingual;
+      document.getElementById('third-field').hidden=!settings.multilingual;
+      for (const input of document.querySelectorAll('[data-enabled]')) input.checked=settings.enabled[input.dataset.enabled];
+      document.getElementById('clock-options').hidden=!settings.enabled.analog;
+      document.querySelector('[data-enabled="analog"]').setAttribute('aria-expanded',String(settings.enabled.analog));
+      document.getElementById('numeral-options').hidden=!settings.enabled.numerals;
+      document.querySelector('[data-enabled="numerals"]').setAttribute('aria-expanded',String(settings.enabled.numerals));
+      document.getElementById('numeral-count').value=String(settings.numeralCount);
+      document.getElementById('numeral-count').setAttribute('aria-label',t('numeralCount'));
+      document.getElementById('numeral-position').value=settings.numeralPosition;
+      document.getElementById('numeral-position').setAttribute('aria-label',t('numeralPosition'));
+      for (const hint of document.querySelectorAll('[data-hint]')) hint.hidden=settings.enabled[hint.dataset.hint];
+      settingsToggle.setAttribute('aria-label',t(settingsPanel.hidden?'settings':'closeSettings'));
+      document.getElementById('settings-close').setAttribute('aria-label',t('closeSettings'));
+      document.getElementById('add').setAttribute('aria-label',t('add'));
+      document.getElementById('capture').setAttribute('aria-label',t('capture'));
+      document.getElementById('capture').title=t('capture');
+      const fullscreen=document.getElementById('fullscreen');
+      fullscreen.setAttribute('aria-label',t(document.fullscreenElement?'exitFullscreen':'fullscreen'));fullscreen.title=fullscreen.getAttribute('aria-label');
+      picker.querySelector('h2').textContent=t('addTitle');
+      document.getElementById('close-picker').setAttribute('aria-label',t('close'));
+      search.placeholder=t('search');search.setAttribute('aria-label',t('search'));
+      document.querySelector('.clock-scroll').setAttribute('aria-label',t('clockRegion'));
+    }
+    function setSettingsOpen(open) {
+      if(open && timeEdit)finishTimeEdit();
+      if(open && activeDrag){const drag=activeDrag;activeDrag=null;drag.card.classList.remove('dragging');if(drag.card.hasPointerCapture(drag.pointerId))drag.card.releasePointerCapture(drag.pointerId);}
+      if(open && settingsPanel.hidden)previousBodyOverflow=document.body.style.overflow;
+      settingsPanel.hidden=!open;
+      page.classList.toggle('settings-open',open);
+      document.body.style.overflow=open?'hidden':previousBodyOverflow;
+      for(const element of page.children)if(element!==settingsPanel)element.inert=open;
+      settingsToggle.setAttribute('aria-expanded',String(open));
+      settingsToggle.setAttribute('aria-label',t(open?'closeSettings':'settings'));
+      renderSettingsPreview();updateSettingsPreview(new Date());
+      (open?settingsPanel:settingsToggle).focus({preventScroll:true});
+    }
+    settingsPanel.addEventListener('keydown',event=>{
+      if(event.key!=='Tab')return;
+      const controls=[...settingsPanel.querySelectorAll('button,input,select,[tabindex="0"]')].filter(element=>!element.disabled && element.getClientRects().length);
+      const first=controls[0],last=controls[controls.length-1];
+      if(event.shiftKey && (document.activeElement===first || document.activeElement===settingsPanel)){event.preventDefault();last.focus();}
+      else if(!event.shiftKey && (document.activeElement===last || document.activeElement===settingsPanel)){event.preventDefault();first.focus();}
+    });
+    function applySettings() {
+      normalizeLanguages();
+      for (const key of enabledKeys) page.classList.toggle(`hide-${key}`,!settings.enabled[key]);
+      page.style.setProperty('--language-count',displayLanguages().length);
+      updateLanguageUI();render();
+      try { localStorage.setItem('be-present-settings',JSON.stringify(settings)); } catch {}
+    }
+    settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
+    document.getElementById('settings-close').onclick=()=>setSettingsOpen(false);
+    for (const [id,key] of [['primary-language','language'],['secondary-language','secondLanguage'],['third-language','thirdLanguage']]) {
+      document.getElementById(id).onchange=event=>{settings[key]=event.target.value;applySettings();};
+    }
+    document.getElementById('multilingual').onchange=event=>{settings.multilingual=event.target.checked;applySettings();};
+    for (const input of document.querySelectorAll('[data-enabled]')) input.onchange=()=>{settings.enabled[input.dataset.enabled]=input.checked;applySettings();};
+    document.getElementById('numeral-count').onchange=event=>{settings.numeralCount=Number(event.target.value);applySettings();};
+    document.getElementById('numeral-position').onchange=event=>{settings.numeralPosition=event.target.value;applySettings();};
+    async function rasterizeSnapshotSVG(snapshot) {
+      const properties=['fill','fill-opacity','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','font-family','font-size','font-weight','text-anchor','dominant-baseline','opacity','display','visibility'];
+      for (const svg of snapshot.querySelectorAll('svg')) {
+        const style=getComputedStyle(svg);
+        const width=parseFloat(style.width),height=parseFloat(style.height);
+        if (!width || !height || style.display==='none') continue;
+        const standalone=svg.cloneNode(true);
+        const sources=[svg,...svg.querySelectorAll('*')],targets=[standalone,...standalone.querySelectorAll('*')];
+        sources.forEach((node,index)=>{const computed=getComputedStyle(node);for(const property of properties)targets[index].style.setProperty(property,computed.getPropertyValue(property));});
+        standalone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+        standalone.setAttribute('width',String(width*2));standalone.setAttribute('height',String(height*2));
+        const image=new Image();image.src=`data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(standalone))}`;
+        await image.decode();
+        const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*2);canvas.height=Math.ceil(height*2);
+        canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+        const bitmap=document.createElement('img');bitmap.src=canvas.toDataURL('image/png');
+        bitmap.className=svg.getAttribute('class') || '';bitmap.style.cssText=svg.style.cssText;
+        bitmap.style.width=`${width}px`;bitmap.style.height=`${height}px`;
+        if(svg.dataset.numeralPosition)bitmap.dataset.numeralPosition=svg.dataset.numeralPosition;
+        svg.replaceWith(bitmap);
+      }
+    }
+    function rasterizeSnapshotTitle(snapshot) {
+      const heading=snapshot.querySelector('.brand-name');
+      const style=getComputedStyle(heading);
+      const width=parseFloat(style.width),height=parseFloat(style.height);
+      if(!width || !height || style.visibility==='hidden')return;
+      const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*2);canvas.height=Math.ceil(height*2);
+      const context=canvas.getContext('2d');context.scale(2,2);
+      context.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      context.letterSpacing=style.letterSpacing;context.fillStyle=style.color;
+      const metrics=context.measureText(heading.textContent);
+      const baseline=(height-metrics.actualBoundingBoxAscent-metrics.actualBoundingBoxDescent)/2+metrics.actualBoundingBoxAscent;
+      context.fillText(heading.textContent,0,baseline);
+      const image=document.createElement('img');image.src=canvas.toDataURL('image/png');
+      image.style.cssText=`display:block;width:${width}px;height:${height}px;`;
+      heading.replaceWith(image);
+    }
+    async function createScreenshotBlob() {
+      if (timeEdit) finishTimeEdit();
+      const padding=getComputedStyle(page);
+      const row=document.querySelector('.clocks');
+      const rowWidth=[...row.children].reduce((sum,card)=>sum+parseFloat(getComputedStyle(card).width),0)+Math.max(0,row.children.length-1)*parseFloat(getComputedStyle(row).columnGap);
+      const naturalWidth=rowWidth+parseFloat(padding.paddingLeft)+parseFloat(padding.paddingRight);
+      const width=naturalWidth<=page.offsetWidth+1?page.offsetWidth:Math.ceil(naturalWidth);
+      const host=document.createElement('div');
+      host.className='capture-host';
+      host.style.cssText=`position:fixed;left:-100000px;top:0;width:${width}px;pointer-events:none;`;
+      const snapshot=page.cloneNode(true);
+      snapshot.style.width=`${width}px`;snapshot.style.position='relative';
+      // Keep the composition while exporting only the title and clock content.
+      snapshot.querySelector('.bottom-actions').style.height=document.querySelector('.bottom-actions').getBoundingClientRect().height+'px';
+      for(const control of snapshot.querySelectorAll('.actions,.settings-panel,.time-editor,button,a'))control.remove();
+      const snapshotScroll=snapshot.querySelector('.clock-scroll');
+      snapshotScroll.style.overflow='visible';snapshotScroll.scrollLeft=0;
+      const freeze=document.createElement('style');freeze.textContent='*{transition:none!important;animation:none!important;}';snapshot.append(freeze);
+      for (const node of snapshot.querySelectorAll('[data-i18n],[data-enabled],[data-hint]')) {node.removeAttribute('data-i18n');node.removeAttribute('data-enabled');node.removeAttribute('data-hint');}
+      host.append(snapshot);document.body.append(host);
+      try {
+        await document.fonts.ready;
+        rasterizeSnapshotTitle(snapshot);
+        await rasterizeSnapshotSVG(snapshot);
+        const height=Math.ceil(Math.max(page.offsetHeight,snapshot.scrollHeight));
+        const pixelRatio=Math.min(window.devicePixelRatio || 1,2,32760/Math.max(width,height),Math.sqrt(32000000/(width*height)));
+        const blob=await htmlToImage.toBlob(snapshot,{width,height,pixelRatio,backgroundColor:'#000',preferredFontFormat:'truetype'});
+        if (!blob) throw new Error('Screenshot encoding failed');
+        return blob;
+      } finally {host.remove();}
+    }
+    const captureButton=document.getElementById('capture');
+    const captureStatus=document.getElementById('capture-status');
+    function positionCaptureStatus() {
+      if(captureStatus.hidden)return;
+      const clocksBottom=document.getElementById('clocks').getBoundingClientRect().bottom;
+      const addTop=document.getElementById('add').getBoundingClientRect().top;
+      captureStatus.style.setProperty('--capture-status-top',((clocksBottom+addTop)/2)+'px');
+    }
+    window.addEventListener('resize',positionCaptureStatus,{passive:true});
+    window.addEventListener('scroll',positionCaptureStatus,{passive:true});
+    const captureLayoutObserver=new ResizeObserver(positionCaptureStatus);
+    captureLayoutObserver.observe(document.querySelector('main'));
+    captureLayoutObserver.observe(document.getElementById('clocks'));
+    let captureStatusTimer;
+    let captureHideTimer;
+    captureButton.onclick=async()=>{
+      if(captureButton.disabled)return;
+      clearTimeout(captureStatusTimer);clearTimeout(captureHideTimer);captureStatus.classList.remove('is-visible');captureStatus.hidden=true;
+      captureButton.disabled=true;captureButton.setAttribute('aria-busy','true');
+      let imagePromise;
+      try {
+        if (!navigator.clipboard?.write || typeof ClipboardItem==='undefined') throw new Error('ClipboardUnsupported');
+        imagePromise=createScreenshotBlob();imagePromise.catch(()=>{});
+        await navigator.clipboard.write([new ClipboardItem({'image/png':imagePromise})]);
+        captureStatus.textContent=t('captureCopied');
+        captureStatus.dataset.state='success';
+      } catch (error) {
+        captureStatus.textContent=t(error.message==='ClipboardUnsupported'?'captureUnsupported':'captureFailed');
+        captureStatus.dataset.state='error';
+      } finally {
+        if (imagePromise) await imagePromise.catch(()=>{});
+        captureButton.disabled=false;captureButton.removeAttribute('aria-busy');
+        captureStatus.hidden=false;
+        positionCaptureStatus();
+        void captureStatus.offsetWidth;
+        captureStatus.classList.add('is-visible');
+        captureStatusTimer=setTimeout(()=>{captureStatus.classList.remove('is-visible');captureHideTimer=setTimeout(()=>{captureStatus.hidden=true;},350);},3000);
+      }
+    };
+    let touchRevealTimer;
+    function revealEdgeControls(event) {
+      const bottom=event.clientY>=window.innerHeight-112;
+      const top=event.clientY<=100;
+      page.classList.toggle('reveal-bottom',bottom);
+      page.classList.toggle('reveal-top',top);
+      if (event.pointerType==='touch') {
+        clearTimeout(touchRevealTimer);
+        touchRevealTimer=setTimeout(()=>{page.classList.remove('reveal-bottom','reveal-top');},3000);
+      }
+    }
+    document.addEventListener('pointermove',revealEdgeControls,{passive:true});
+    document.addEventListener('pointerdown',event=>{if(event.pointerType==='touch')revealEdgeControls(event);},{passive:true});
+    document.addEventListener('pointerout',event=>{if(!event.relatedTarget)page.classList.remove('reveal-bottom','reveal-top');});
+    const formatters = new Map();
+    function formatter(zone) {
+      if (!formatters.has(zone)) formatters.set(zone, {
+        time:new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}),
+        date:new Intl.DateTimeFormat('zh-CN',{timeZone:zone,month:'long',day:'numeric',weekday:'long'}),
+        offset:new Intl.DateTimeFormat('en',{timeZone:zone,timeZoneName:'shortOffset'}),
+        day:new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'})
+      });
+      return formatters.get(zone);
+    }
+    function save() { try { localStorage.setItem('moment-cities',JSON.stringify(cities.map(c => c.id))); } catch {} }
+    function calendarDay(zone, date) {
+      const parts=Object.fromEntries(formatter(zone).day.formatToParts(date).map(p=>[p.type,p.value]));
+      return Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day))/86400000;
+    }
+    function localTimestamp(zone,timestamp) {
+      const date=new Date(timestamp);
+      const parts=Object.fromEntries(formatter(zone).time.formatToParts(date).map(part=>[part.type,part.value]));
+      return calendarDay(zone,date)*86400000+Number(parts.hour)*3600000+Number(parts.minute)*60000+Number(parts.second)*1000;
+    }
+    function resolveWallTime(zone,reference,hour,minute,second) {
+      const desired=calendarDay(zone,new Date(reference))*86400000+hour*3600000+minute*60000+second*1000;
+      const offsets=new Set([reference,desired-129600000,desired,desired+129600000].map(sample=>localTimestamp(zone,sample)-Math.floor(sample/1000)*1000));
+      const candidates=[...offsets].map(offset=>desired-offset).filter(candidate=>localTimestamp(zone,candidate)===desired);
+      candidates.sort((a,b)=>Math.abs(a-reference)-Math.abs(b-reference));
+      return candidates[0] ?? null;
+    }
+    function previewOnToday(timestamp,city) {
+      const reference=Date.now();
+      const day=calendarDay(city.zone,new Date(timestamp));
+      const today=calendarDay(city.zone,new Date(reference));
+      if (day===today) return timestamp;
+      const parts=Object.fromEntries(formatter(city.zone).time.formatToParts(new Date(timestamp)).map(part=>[part.type,part.value]));
+      const resolved=resolveWallTime(city.zone,reference,Number(parts.hour),Number(parts.minute),Number(parts.second));
+      if (resolved!==null) return resolved;
+      const fallback=timestamp+(today-day)*86400000;
+      return calendarDay(city.zone,new Date(fallback))===today?fallback:reference;
+    }
+    function setCityPreview(timestamp,city,snapToMinute=true) {
+      if (!Number.isFinite(timestamp) || Math.abs(timestamp)>8640000000000000) return;
+      previewAnchorCityId=city.id;
+      setPreview(previewOnToday(timestamp,city),snapToMinute);
+    }
+    function applyTimeDraft() {
+      if (!timeEdit) return true;
+      const { city,fields,reference }=timeEdit;
+      const limits=[23,59,59];
+      const valid=fields.map((field,index)=>/^\d{1,2}$/.test(field.value) && Number(field.value)<=limits[index]);
+      fields.forEach((field,index)=>field.setAttribute('aria-invalid',String(!valid[index])));
+      if (valid.some(value=>!value)) return false;
+      const timestamp=resolveWallTime(city.zone,reference,...fields.map(field=>Number(field.value)));
+      if (timestamp===null) { fields.forEach(field=>field.setAttribute('aria-invalid','true'));return false; }
+      setCityPreview(timestamp,city,false);
+      timeEdit.lastValues=fields.map(field=>field.value.padStart(2,'0'));
+      return true;
+    }
+    function settleTimeDraft() {
+      if (!timeEdit) return;
+      const {fields,lastValues,activeIndex,focusValue}=timeEdit;
+      fields.forEach((field,index)=>{
+        if (field.getAttribute('aria-invalid')==='true' || !/^\d{1,2}$/.test(field.value) || Number(field.value)>(index===0?23:59)) field.value=index===activeIndex?focusValue:lastValues[index];
+        else field.value=field.value.padStart(2,'0');
+      });
+      if (!applyTimeDraft()) {
+        fields.forEach((field,index)=>{field.value=lastValues[index];});
+        applyTimeDraft();
+      }
+    }
+    function finishTimeEdit(cancel=false) {
+      if (!timeEdit) return true;
+      if (!cancel) settleTimeDraft();
+      const edit=timeEdit;timeEdit=null;
+      edit.form.hidden=true;edit.digital.hidden=false;
+      if (cancel) { if (edit.wasPreview) {previewAnchorCityId=edit.originalAnchor;setPreview(edit.originalTimestamp,false);}else resetPreview(); }
+      
+      return true;
+    }
+    function beginTimeEdit(city,fieldIndex=0) {
+      if (timeEdit?.city===city || (timeEdit && !finishTimeEdit())) return;
+      const card=city.el;
+      const digital=card.querySelector('.digital'),form=card.querySelector('.time-editor');
+      const fields=[...form.querySelectorAll('input')];
+      const originalTimestamp=previewTimestamp,originalAnchor=previewAnchorCityId;
+      const reference=previewOnToday(previewTimestamp ?? Date.now(),city);
+      const parts=Object.fromEntries(formatter(city.zone).time.formatToParts(new Date(reference)).map(part=>[part.type,part.value]));
+      fields.forEach((field,index)=>{field.value=parts[['hour','minute','second'][index]];field.setAttribute('aria-invalid','false');});
+      timeEdit={city,digital,form,fields,reference,lastValues:fields.map(field=>field.value),wasPreview:originalTimestamp!==null,originalTimestamp,originalAnchor};
+      digital.hidden=true;form.hidden=false;
+      setCityPreview(reference,city,false);
+      fields[fieldIndex].focus({preventScroll:true});fields[fieldIndex].select();
+    }
+    function bindTimeEditor(card,city) {
+      const digital=card.querySelector('.digital');
+      digital.innerHTML='<span data-time-part="0"></span><span data-time-part="1">:</span><span data-time-part="1"></span><span class="seconds"><span data-time-part="2">:</span><span data-time-part="2"></span></span>';
+      const form=document.createElement('form');form.className='time-editor';form.hidden=true;
+      form.setAttribute('aria-label',t('editTime').replace('{city}',cityName(city)));
+      const fields=['hours','minutes','seconds'].map((name,index)=>{
+        if (index) { const separator=document.createElement('span');separator.className='separator';separator.textContent=':';separator.setAttribute('aria-hidden','true');form.append(separator); }
+        const field=document.createElement('input');field.type='text';field.inputMode='numeric';field.maxLength=2;field.autocomplete='off';field.spellcheck=false;
+        field.setAttribute('aria-label',t(name));form.append(field);
+        field.addEventListener('focus',()=>{
+          if (timeEdit?.form===form) {timeEdit.activeIndex=index;timeEdit.focusValue=field.value;}
+          field.select();
+        });
+        field.addEventListener('click',()=>field.select());
+        field.addEventListener('blur',()=>{
+          if (timeEdit?.form===form) settleTimeDraft();
+        });
+        field.addEventListener('input',()=>{
+          field.value=field.value.replace(/[０-９]/g,char=>String.fromCharCode(char.charCodeAt(0)-65248)).replace(/\D/g,'').slice(0,2);
+          applyTimeDraft();
+        });
+        field.addEventListener('keydown',event=>{
+          if (event.key==='Escape') { event.preventDefault();event.stopPropagation();finishTimeEdit(true);digital.focus({preventScroll:true}); }
+          else if (event.key==='Enter') {
+            event.preventDefault();settleTimeDraft();
+            if (index<2) {fields[index+1].focus();fields[index+1].select();}
+            else if(finishTimeEdit())digital.focus({preventScroll:true});
+          }
+          else if (event.key==='ArrowUp' || event.key==='ArrowDown') {
+            event.preventDefault();const max=index===0?24:60;
+            field.value=String((Number(field.value||0)+(event.key==='ArrowUp'?1:-1)+max)%max).padStart(2,'0');applyTimeDraft();field.select();
+          } else if ((event.key==='ArrowRight' && field.selectionEnd===field.value.length && index<2) || (event.key==='ArrowLeft' && field.selectionStart===0 && index>0)) {
+            event.preventDefault();fields[index+(event.key==='ArrowRight'?1:-1)].focus();
+          }
+        });
+        return field;
+      });
+      form.addEventListener('submit',event=>{event.preventDefault();if(finishTimeEdit())digital.focus({preventScroll:true});});
+      form.addEventListener('focusout',event=>{if(form.contains(event.relatedTarget))return;queueMicrotask(()=>{if(timeEdit?.form===form && !form.contains(document.activeElement))finishTimeEdit();});});
+      digital.setAttribute('role','button');digital.tabIndex=0;
+      digital.onclick=event=>beginTimeEdit(city,Number(event.target.closest('[data-time-part]')?.dataset.timePart ?? 0));
+      digital.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();beginTimeEdit(city);}});
+      const area=document.createElement('div');area.className='time-area';digital.replaceWith(area);area.append(digital,form);
+    }
+    function setPreview(timestamp,snapToMinute=true) {
+      if (!Number.isFinite(timestamp) || Math.abs(timestamp)>8640000000000000) return;
+      previewTimestamp=snapToMinute?Math.floor(timestamp/60000)*60000:Math.floor(timestamp/1000)*1000;
+      page.classList.add('is-exploring');
+      update();
+    }
+    function shiftMinutes(minutes) {
+      setPreview((previewTimestamp ?? Date.now())+minutes*60000);
+    }
+    function resetPreview() {
+      previewTimestamp=null;
+      previewAnchorCityId=null;
+      wheelRemainder=0;
+      wheelCityId=null;
+      if (activeDrag) {
+        const { card, pointerId }=activeDrag;
+        activeDrag=null;
+        card.classList.remove('dragging');
+        if (card.hasPointerCapture(pointerId)) card.releasePointerCapture(pointerId);
+      }
+      page.classList.remove('is-exploring');
+      update();
+    }
+    function stepTimeGrid(steps,zone,city=cities.find(item=>item.zone===zone)) {
+      const previous=previewTimestamp ?? activeDrag?.baseTime ?? Date.now();
+      const offset=localTimestamp(zone,previous)-Math.floor(previous/1000)*1000;
+      const position=(previous+offset)/300000;
+      const target=((steps>0?Math.floor(position):Math.ceil(position))+steps)*300000-offset;
+      if (city) setCityPreview(target,city);else setPreview(target);
+      if (activeDrag && previewTimestamp!==previous) activeDrag.baseTime+=previewTimestamp-previous;
+    }
+    function handleTimeWheel(event,city) {
+      if (event.ctrlKey || picker.open || event.target.closest('select,.settings-panel') || Math.abs(event.deltaX)>Math.abs(event.deltaY) || !event.deltaY) return;
+      if (event.target.closest('input') && !timeEdit) return;
+      if (timeEdit) finishTimeEdit();
+      event.preventDefault();
+      const movement=event.deltaY/(event.deltaMode===1?3:event.deltaMode===2?1:100);
+      if (wheelCityId!==city.id || (wheelRemainder && Math.sign(movement)!==Math.sign(wheelRemainder))) wheelRemainder=0;
+      wheelCityId=city.id;
+      wheelRemainder+=movement;
+      const steps=Math.trunc(wheelRemainder+Math.sign(wheelRemainder)*1e-9);
+      if (steps) { wheelRemainder-=steps;if(Math.abs(wheelRemainder)<1e-9)wheelRemainder=0;stepTimeGrid(steps,city.zone,city); }
+    }
+    document.addEventListener('wheel',event=>{if(activeDrag)handleTimeWheel(event,activeDrag.city);},{passive:false});
+    function bindTimeControls(card, city) {
+      card.tabIndex=0;
+      card.setAttribute('role','group');
+      card.setAttribute('aria-label',t('clockInstructions').replace('{city}',cityName(city)));
+      card.addEventListener('wheel',event=>{
+        if (!activeDrag) handleTimeWheel(event,city);
+      },{passive:false});
+      card.addEventListener('pointerdown',event=>{
+        if (event.button!==0 || event.isPrimary===false || activeDrag || picker.open || event.target.closest('button,.time-area')) return;
+        wheelRemainder=0;
+        wheelCityId=null;
+        activeDrag={card,city,pointerId:event.pointerId,startY:event.clientY,baseTime:previewTimestamp ?? Math.floor(Date.now()/60000)*60000,moved:false};
+        card.setPointerCapture(event.pointerId);
+      });
+      card.addEventListener('pointermove',event=>{
+        if (!activeDrag || activeDrag.card!==card || activeDrag.pointerId!==event.pointerId) return;
+        const minutes=Math.trunc(event.clientY-activeDrag.startY);
+        if (!activeDrag.moved && Math.abs(minutes)<3) return;
+        activeDrag.moved=true;
+        card.classList.add('dragging');
+        setCityPreview(activeDrag.baseTime+minutes*60000,city);
+      });
+      const endDrag=event=>{
+        if (!activeDrag || activeDrag.card!==card || activeDrag.pointerId!==event.pointerId) return;
+        activeDrag=null;
+        card.classList.remove('dragging');
+        if (card.hasPointerCapture(event.pointerId)) card.releasePointerCapture(event.pointerId);
+      };
+      card.addEventListener('pointerup',endDrag);
+      card.addEventListener('pointercancel',endDrag);
+      card.addEventListener('lostpointercapture',endDrag);
+      card.addEventListener('keydown',event=>{
+        if (event.target!==card || picker.open) return;
+        if (event.key==='ArrowUp' || event.key==='ArrowDown') {
+          event.preventDefault(); stepTimeGrid(event.key==='ArrowDown'?1:-1,city.zone,city);
+        } else if (event.key==='Home') { event.preventDefault(); resetPreview(); }
+      });
+    }
+    function render() {
+      if (timeEdit) finishTimeEdit(true);
+      container.replaceChildren();
+      for (const city of cities) {
+        const card = document.createElement('article'); card.className = 'clock-card';
+        let ticks = '';
+        for (let i=0;i<60;i++) ticks += `<line x1="120" y1="${i%5===0?12:13}" x2="120" y2="${i%5===0?22:17}" transform="rotate(${i*6} 120 120)" stroke="${i%5===0?'#929292':'#363636'}" stroke-width="${i%5===0?1.6:1}"/>`;
+        let numerals='';
+        const hours=settings.numeralCount===4?[12,3,6,9]:Array.from({length:12},(_,index)=>index+1);
+        const numeralRadius=settings.numeralPosition==='outside'?136:86;
+        for (const hour of hours) {
+          const angle=hour*Math.PI/6;
+          numerals+=`<text x="${(120+numeralRadius*Math.sin(angle)).toFixed(2)}" y="${(120-numeralRadius*Math.cos(angle)).toFixed(2)}">${hour}</text>`;
+        }
+        card.innerHTML = `<svg class="dial" viewBox="0 0 240 240" aria-hidden="true"><circle cx="120" cy="120" r="118" fill="none" stroke="#202020" stroke-width=".7"/>${ticks}<line class="hour" x1="120" y1="120" x2="120" y2="65"/><line class="minute" x1="120" y1="120" x2="120" y2="35"/><line class="second" x1="120" y1="137" x2="120" y2="30"/><circle cx="120" cy="120" r="3" fill="#eee"/></svg><div class="clock-label">${city.id==='paris'?`<span class="home">${t('local')}</span>`:''}</div><div class="city-line"><h2 class="city"></h2></div><p class="country"></p><time class="digital"></time><div class="clock-meta"><p class="date"></p><span class="zone"></span><p class="day-change" aria-live="polite" aria-atomic="true"></p></div>`;
+        const numberGroup=document.createElementNS('http://www.w3.org/2000/svg','g');numberGroup.classList.add('dial-numbers');numberGroup.innerHTML=numerals;
+        numberGroup.dataset.position=settings.numeralPosition;
+        const dial=card.querySelector('.dial');
+        const outsideNumbers=settings.enabled.numerals && settings.numeralPosition==='outside';
+        dial.dataset.numeralPosition=outsideNumbers?'outside':'inside';
+        dial.setAttribute('viewBox',outsideNumbers?'-28 -28 296 296':'0 0 240 240');
+        dial.insertBefore(numberGroup,card.querySelector('.hour'));
+        renderLines(card.querySelector('.city'),displayLanguages().map(lang=>cityName(city,lang)));
+        renderLines(card.querySelector('.country'),displayLanguages().map(lang=>countryName(city,lang)));
+        if (city.id !== 'paris') {
+          const remove = document.createElement('button'); remove.className='remove'; remove.textContent='×'; remove.setAttribute('aria-label',t('remove').replace('{city}',cityName(city)));
+          remove.onclick=()=>{cities=cities.filter(c=>c.id!==city.id);save();render();}; card.append(remove);
+        }
+        bindTimeControls(card,city);
+        bindTimeEditor(card,city);
+        city.el=card; container.append(card);
+      }
+      renderSettingsPreview();
+      update();
+    }
+    function renderSettingsPreview() {
+      settingsPreview.replaceChildren();previewCity=null;
+      if(settingsPanel.hidden || !container.firstElementChild)return;
+      previewCity={...(catalog.find(city=>city.zone===localZone) || {id:'browser-local',name:t('local'),country:'',zone:localZone})};
+      const card=container.firstElementChild.cloneNode(true);
+      card.classList.remove('dragging');card.classList.add('preview-clock');
+      card.removeAttribute('tabindex');card.setAttribute('aria-label',t('localPreview'));
+      for(const element of card.querySelectorAll('.remove,.time-editor'))element.remove();
+      const time=card.querySelector('.digital');time.hidden=false;time.removeAttribute('role');time.removeAttribute('tabindex');
+      const label=card.querySelector('.clock-label');label.replaceChildren();
+      const home=document.createElement('span');home.className='home';home.textContent=t('local');label.append(home);
+      renderLines(card.querySelector('.city'),displayLanguages().map(lang=>cityName(previewCity,lang)));
+      renderLines(card.querySelector('.country'),displayLanguages().map(lang=>countryName(previewCity,lang)));
+      for(const element of card.querySelectorAll('.date,.zone'))element.removeAttribute('aria-hidden');
+      card.querySelector('.day-change').textContent='';
+      settingsPreview.setAttribute('aria-label',t('localPreview'));
+      previewCity.el=card;settingsPreview.append(card);
+    }
+    function paintClock(card,zone,date,name) {
+      const parts=Object.fromEntries(formatter(zone).time.formatToParts(date).map(part=>[part.type,part.value]));
+      const h=Number(parts.hour),m=Number(parts.minute),s=Number(parts.second);
+      card.querySelector('.hour').setAttribute('transform',`rotate(${h*30+m/2+s/120} 120 120)`);
+      card.querySelector('.minute').setAttribute('transform',`rotate(${m*6+s/10} 120 120)`);
+      card.querySelector('.second').setAttribute('transform',`rotate(${s*6} 120 120)`);
+      const time=card.querySelector('time');
+      for(const [index,value] of [parts.hour,parts.minute,parts.second].entries()){
+        const segments=time.querySelectorAll(`[data-time-part="${index}"]`);const number=segments[segments.length-1];
+        if(number.textContent!==value)number.textContent=value;
+      }
+      time.dateTime=date.toISOString();time.setAttribute('aria-label',`${name} ${parts.hour}:${parts.minute}:${parts.second}`);
+    }
+    function updateSettingsPreview(date) {
+      if(!previewCity)return;
+      const {el:card,zone}=previewCity;
+      paintClock(card,zone,date,cityName(previewCity));
+      renderLines(card.querySelector('.date'),displayLanguages().map(lang=>localizedDate(zone,lang,date)));
+      const offset=formatter(zone).offset.formatToParts(date).find(part=>part.type==='timeZoneName').value.replace('GMT','UTC');
+      card.querySelector('.zone').textContent=offset==='UTC'?'UTC+0':offset;
+    }
+    function update() {
+      const realNow = new Date();
+      const exploring = previewTimestamp!==null;
+      const now = exploring ? new Date(previewTimestamp) : realNow;
+      const parisDay = calendarDay('Europe/Paris',now);
+      for (const city of cities) {
+        const f=formatter(city.zone);
+        const card=city.el;
+        paintClock(card,city.zone,now,cityName(city));
+        const day=calendarDay(city.zone,now);
+        renderLines(card.querySelector('.date'),displayLanguages().map(lang=>localizedDate(city.zone,lang,now)+(day===parisDay?'':` · ${t(day>parisDay?'nextDate':'previousDate',lang)}`)));
+        const offset=f.offset.formatToParts(now).find(p=>p.type==='timeZoneName').value.replace('GMT','UTC');
+        card.querySelector('.zone').textContent=offset==='UTC'?'UTC+0':offset;
+        card.querySelector('.date').setAttribute('aria-hidden',String(exploring));
+        card.querySelector('.zone').setAttribute('aria-hidden',String(exploring));
+        const dayDelta=exploring && city.id!==previewAnchorCityId ? calendarDay(city.zone,now)-calendarDay(city.zone,realNow) : 0;
+        const dayLabel=dayMessage(dayDelta);
+        const dayChange=card.querySelector('.day-change');
+        if (dayChange.textContent!==dayLabel) dayChange.textContent=dayLabel;
+        dayChange.classList.toggle('future',dayDelta>0);
+        dayChange.classList.toggle('past',dayDelta<0);
+      }
+      updateSettingsPreview(realNow);
+    }
+    function showOptions() {
+      const query=search.value.trim().toLowerCase(); options.replaceChildren();
+      const matches=catalog.filter(c=>!cities.some(x=>x.id===c.id)&&`${c.name} ${c.country} ${c.zone} ${Object.keys(languageOptions).map(lang=>cityName(c,lang)).join(' ')}`.toLowerCase().includes(query)).slice(0,40);
+      for (const city of matches) {
+        const button=document.createElement('button'); button.className='city-option';
+        button.append(document.createTextNode(cityName(city))); const label=document.createElement('span'); label.textContent=city.zone; button.append(label);
+        button.onclick=()=>{cities.push({...city});save();render();picker.close();container.lastElementChild.scrollIntoView({block:'nearest',inline:'nearest'});}; options.append(button);
+      }
+      if (!matches.length) { const p=document.createElement('p'); p.className='empty';p.textContent=t('noResults');options.append(p); }
+    }
+    document.getElementById('add').onclick=()=>{search.value='';showOptions();picker.showModal();search.focus();};
+    document.addEventListener('keydown',event=>{if(event.key==='Escape' && !picker.open){if(timeEdit)finishTimeEdit(true);else if(!settingsPanel.hidden)setSettingsOpen(false);else resetPreview();}});
+    let backgroundGesture = null;
+    document.addEventListener('pointerdown',event=>{
+      backgroundGesture={pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
+      if(timeEdit && !timeEdit.form.contains(event.target) && event.target!==timeEdit.digital)finishTimeEdit();
+    },{capture:true});
+    document.addEventListener('pointermove',event=>{
+      if(backgroundGesture?.pointerId===event.pointerId && Math.hypot(event.clientX-backgroundGesture.x,event.clientY-backgroundGesture.y)>3)backgroundGesture.moved=true;
+    },{capture:true,passive:true});
+    document.addEventListener('click',event=>{
+      if(previewTimestamp===null || event.button!==0 || event.defaultPrevented || activeDrag || backgroundGesture?.moved || picker.open || !settingsPanel.hidden)return;
+      if(event.target.closest('.clock-card,button,a,input,select,textarea,label,dialog,.settings-panel,[role="button"],[role="switch"],[contenteditable]'))return;
+      resetPreview();
+    });
+    document.getElementById('close-picker').onclick=()=>picker.close();
+    picker.addEventListener('click',e=>{if(e.target===picker){const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)picker.close();}});
+    search.oninput=showOptions;
+    document.getElementById('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{document.getElementById('fullscreen').title=t('fullscreenUnavailable');}};
+    document.addEventListener('fullscreenchange',()=>{const label=t(document.fullscreenElement?'exitFullscreen':'fullscreen');document.getElementById('fullscreen').setAttribute('aria-label',label);document.getElementById('fullscreen').title=label;});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+    applySettings(); setInterval(update,250);
+  </script>
+</body>
+</html>
