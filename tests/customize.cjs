@@ -14,7 +14,9 @@ async function main() {
     assert.equal(await page.locator('#settings-title').textContent(),'自定义');
     assert.equal(await page.locator('.settings-columns legend').first().textContent(),'时间');
     assert.equal(await page.locator('#settings-panel').innerText().then(text=>/隐藏|启用/.test(text)),false);
-    assert.equal(await page.locator('[data-enabled]').evaluateAll(nodes=>nodes.every(node=>node.checked)),true);
+    assert.equal(await page.locator('[data-enabled]').evaluateAll(nodes=>nodes.every(node=>node.checked===!['country','date'].includes(node.dataset.enabled))),true);
+    assert.equal(await page.locator('#multilingual').isChecked(),false);
+    assert.deepEqual(await page.evaluate(()=>cities.map(city=>city.id)),['paris','waterloo','new-york','beijing']);
     assert.equal(await page.locator('#clock-options').isVisible(),true);
     assert.equal(await page.locator('#numeral-count').inputValue(),'12');
     assert.equal(await page.locator('#numeral-position').inputValue(),'outside');

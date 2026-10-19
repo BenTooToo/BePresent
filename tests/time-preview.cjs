@@ -9,6 +9,8 @@ async function main() {
     page.on('pageerror', error => errors.push(error.message));
     await page.clock.setFixedTime(new Date('2026-10-15T21:50:00Z'));
     await page.goto(process.env.CLOCK_TEST_URL || 'http://127.0.0.1:4173/');
+    // Keep individual cities stable here; clock-fusion.cjs covers automatic grouping.
+    await page.evaluate(()=>{mergeMatchingClocks=()=>{};});
     const cards = page.locator('.clock-card');
     const times = () => page.locator('.digital').evaluateAll(nodes => nodes.map(n => n.textContent));
     const dates = () => page.locator('.digital').evaluateAll(nodes => nodes.map(n => n.dateTime));
@@ -135,13 +137,14 @@ async function main() {
     assert.equal(new Set(await dates()).size, 1);
     await reset();
 
-    // A narrow screen retains a horizontal row and supports touch gestures.
+    // A narrow screen fits the clock grid and supports touch time adjustment.
     const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const touchPage = await touchContext.newPage();
     await touchPage.clock.setFixedTime(new Date('2026-10-15T21:50:00Z'));
     await touchPage.goto(process.env.CLOCK_TEST_URL || 'http://127.0.0.1:4173/');
-    assert.equal(await touchPage.locator('.clock-card').first().evaluate(el => getComputedStyle(el).touchAction), 'pan-x');
-    assert.equal(await touchPage.locator('.clock-scroll').evaluate(el => el.scrollWidth > el.clientWidth), true);
+    await touchPage.evaluate(()=>{mergeMatchingClocks=()=>{};});
+    assert.equal(await touchPage.locator('.clock-card').first().evaluate(el => getComputedStyle(el).touchAction), 'none');
+    assert.equal(await touchPage.locator('.clock-scroll').evaluate(el => el.scrollWidth > el.clientWidth), false);
     const session = await touchContext.newCDPSession(touchPage);
     const touchDial = await touchPage.locator('.dial').first().boundingBox();
     const x = touchDial.x + touchDial.width / 2, y = touchDial.y + touchDial.height / 2;

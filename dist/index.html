@@ -2,9 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <title>Be Present · 本初时间</title>
+  <link id="clock-favicon" rel="icon" type="image/svg+xml" sizes="any" href="assets/icons/clock-12.svg">
   <style>
     @font-face { font-family:"Instrument Serif"; src:url("assets/fonts/InstrumentSerif-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     :root { color-scheme: dark; font-family: Inter, "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif; background:#000; color:#f4f4f4; }
@@ -43,6 +44,7 @@
     .dial-numbers { fill:#929292; font-family:Inter,"Helvetica Neue",Arial,sans-serif; font-size:12px; font-weight:400; text-anchor:middle; dominant-baseline:central; }
     .dial-numbers[data-position=outside] { font-size:16px; fill:#aaa; }
     .hide-secondHand .second, .hide-numerals .dial-numbers { display:none; }
+    .hide-localTimeText .home,.hide-localTime .settings-preview .home { display:none; }
     .city-line { display:flex; justify-content:center; align-items:center; gap:9px; }
     .clock-label { height:33px; display:flex; align-items:center; justify-content:center; }
     .city { margin:0; font-size:17px; font-weight:400; letter-spacing:.12em; }
@@ -72,6 +74,23 @@
     .settings-panel { position:fixed; inset:0; width:100%; height:100svh; padding:40px 4.8vw 60px; overflow:auto; overscroll-behavior:contain; background:#000; border:0; z-index:50; }
     .settings-heading { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; min-height:34px; max-width:1240px; margin:0 auto 44px; background:#000; box-shadow:0 -32px 0 20px #000; }
     .settings-heading h2 { margin:0; font-size:24px; font-weight:400; letter-spacing:.08em; }
+    .settings-footer { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; margin-top:auto; padding-top:12px; }
+    .settings-version { color:#666; font-size:11px; font-variant-numeric:tabular-nums; }
+    .developer-mode-toggle { display:flex; align-items:center; gap:10px; padding:8px 0 4px 12px; color:#777; font-size:11px; cursor:pointer; }
+    .developer-mode-toggle:hover { color:#bbb; }
+    .page:not(.developer-mode) [data-experimental] { display:none!important; }
+    .developer-mode [data-experimental],.developer-mode [data-experimental] label,.developer-mode [data-experimental] .setting-row { color:#ed8080; }
+    .developer-mode [data-experimental] input[type=checkbox] { border-color:#ae4d4d; }
+    .developer-mode [data-experimental] input[type=checkbox]::after { background:#ed8080; }
+    .developer-mode [data-experimental] input[type=checkbox]:checked { background:#ed8080; border-color:#ed8080; }
+    .developer-mode [data-experimental] input[type=checkbox]:checked::after { background:#210a0a; }
+    #clocks .clock-card.reorder-source { opacity:.25; }
+    #clocks .clock-card.reorder-target::after { content:''; position:absolute; inset:-6px; border:1px dashed #ed8080; border-radius:8px; pointer-events:none; }
+    .fusion-overlay.reorder-overlay { z-index:35; }
+    #developer-confirm { width:min(340px,calc(100vw - 44px)); padding:20px; border-radius:8px; }
+    #developer-confirm h3 { margin:0 0 12px; font-size:15px; font-weight:400; }
+    #developer-confirm p { margin:0; color:#aaa; font-size:12px; line-height:1.9; }
+    #developer-confirm form { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
     .customize-layout { display:grid; grid-template-columns:minmax(0,700px) minmax(220px,320px); gap:clamp(40px,7vw,110px); max-width:1240px; margin:0 auto; align-items:start; }
     .customize-content { min-width:0; }
     .developer-note { max-width:1240px; margin:48px auto 0; color:#777; font-size:12px; line-height:1.9; }
@@ -84,6 +103,14 @@
     .settings-preview .day-change { display:none; }
     .hide-date.hide-zone .settings-preview .clock-meta { display:none; }
     .settings-language { display:grid; grid-template-columns:1fr 1fr; gap:16px 40px; padding-bottom:26px; margin-bottom:30px; border-bottom:1px solid #222; }
+    .translation-filter { grid-column:1 / -1; }
+    .translation-filter-label { display:flex; align-items:center; gap:7px; min-width:0; }
+    .setting-info { position:relative; display:inline-flex; flex-shrink:0; }
+    .setting-info button { display:grid; place-items:center; width:15px; height:15px; padding:0; border:1px solid #666; border-radius:50%; background:none; color:#999; font:10px Georgia,serif; }
+    .setting-tooltip { position:absolute; bottom:calc(100% + 8px); left:-110px; width:220px; padding:9px 11px; border:1px solid #383838; border-radius:5px; background:#171717; color:#bbb; font-size:11px; line-height:1.7; z-index:4; visibility:hidden; opacity:0; pointer-events:none; }
+    .setting-info:hover .setting-tooltip,.setting-info:focus-within .setting-tooltip { visibility:visible; opacity:1; }
+    .behavior-settings { display:grid; grid-template-columns:1fr 1fr; gap:10px 40px; padding-bottom:20px; margin-bottom:24px; border-bottom:1px solid #222; }
+    @media(max-width:1000px) { .behavior-settings { grid-template-columns:1fr; gap:4px; } .setting-tooltip { left:auto; right:-35px; width:190px; } }
     .language-field { display:flex; justify-content:space-between; align-items:center; gap:12px; color:#aaa; font-size:12px; min-height:28px; }
     .settings-panel select { min-width:116px; max-width:55%; color:#ccc; background:#111; border:1px solid #333; border-radius:4px; padding:5px 8px; font-size:11px; }
     .settings-columns { display:grid; grid-template-columns:1fr 1fr; gap:40px; }
@@ -146,6 +173,79 @@
     @media (max-width:700px) { .settings-preview { top:64px; } }
     @media (hover:none) { .remove { opacity:1; } }
     @media (prefers-reduced-motion:reduce) { * { transition:none!important; } }
+    .disable-animations,.disable-animations * { transition:none!important; animation:none!important; }
+    /* Reserve space for controls, then fit the complete clock grid to the remainder. */
+    html, body { height:100%; }
+    .page { height:100svh; height:100dvh; min-height:0; padding:clamp(12px,3vh,36px) max(22px,4.8vw,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)); padding-left:max(22px,4.8vw,env(safe-area-inset-left)); padding-top:max(12px,3vh,env(safe-area-inset-top)); }
+    header { flex-shrink:0; }
+    main { min-height:0; padding:20px 0 32px; }
+    .clock-scroll { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; overflow:visible; padding:8px; margin:0; }
+    .clock-scroll.is-reflowing { overflow:clip; }
+    #clocks { display:grid; flex-shrink:0; gap:20px 28px; align-items:center; }
+    #clocks .clock-card { min-width:0; touch-action:none; transform-origin:top left; }
+    #clocks .dial { height:var(--dial-size,260px); }
+    .fusion-overlay { position:fixed; pointer-events:none; z-index:25; transform-origin:top left; }
+    .fusion-overlay .clock-card { margin:0; min-width:0; transform-origin:top left; }
+    .fusion-overlay .remove, .fusion-overlay .remove-actions { display:none; }
+    .fusion-particle { position:fixed; border-radius:50%; background:#fff; box-shadow:0 0 7px #fff,0 0 14px #fffd; pointer-events:none; z-index:26; }
+    .fusion-halo { position:fixed; border:2px solid #ffffffe6; border-radius:50%; box-shadow:0 0 16px #fff8; pointer-events:none; z-index:26; }
+    .remove-actions { position:absolute; top:-9px; right:0; z-index:5; }
+    .remove-actions .remove { position:static; }
+    .remove-actions.is-open .remove { opacity:1; background:#141414; border:1px solid #444; border-bottom:0; border-radius:4px 4px 0 0; }
+    .remove-menu { position:absolute; right:0; top:calc(100% - 1px); min-width:86px; width:max-content; max-width:160px; padding:3px 0; border:1px solid #444; border-radius:4px 0 4px 4px; background:#141414; box-shadow:0 5px 14px #0008; }
+    .remove-menu button { display:block; width:100%; padding:6px 10px; border:0; background:transparent; color:#ccc; font-size:11px; line-height:1.4; text-align:left; overflow-wrap:anywhere; }
+    .remove-menu button:hover,.remove-menu button:focus-visible { background:#2a2a2a; color:#fff; outline-offset:-2px; }
+    #clocks .city .translation-line { overflow-wrap:anywhere; }
+    #clocks .clock-label { height:18px; }
+    #clocks .country { margin:3px 0 7px; }
+    #clocks .clock-meta { margin-top:7px; min-height:calc(34px + (var(--language-count,1) - 1)*18px); }
+    #clocks .date { margin-bottom:5px; }
+    #clocks .digital, #clocks .time-editor { font-size:30px; }
+    .bottom-actions { height:48px; }
+    .add-city { width:44px; height:44px; margin:0; font-size:27px; }
+    .add-city:disabled { opacity:.3; cursor:default; }
+    .settings-toggle, .support-button { bottom:max(16px,env(safe-area-inset-bottom)); }
+    .settings-panel { height:100svh; height:100dvh; padding:clamp(12px,3vh,32px) max(22px,4.8vw) max(12px,env(safe-area-inset-bottom)); overflow:visible; display:flex; flex-direction:column; }
+    .settings-heading { position:relative; top:auto; width:100%; flex-shrink:0; margin-bottom:18px; box-shadow:none; }
+    .settings-body { min-height:0; align-self:center; flex-shrink:0; }
+    .settings-preview { position:static; }
+    .developer-note { margin-top:20px; }
+    .settings-language { gap:12px 24px; padding-bottom:16px; margin-bottom:16px; }
+    .settings-columns { grid-template-columns:1fr 1fr; gap:24px; }
+    .settings-columns legend { margin-bottom:8px; }
+    .setting-row { min-height:36px; }
+    .customize-layout { gap:28px; }
+    dialog { max-height:calc(100dvh - 24px); padding:18px; }
+    .city-options { max-height:min(300px,calc(100dvh - 190px)); }
+    @media (max-width:700px) {
+      main { padding:14px 0 28px; }
+      #clocks { gap:20px; }
+      #clocks .clock-label { height:14px; }
+      #clocks .city { font-size:15px; letter-spacing:.04em; min-height:calc(18px + (var(--language-count,1) - 1)*16px); }
+      #clocks .city .translation-line { line-height:18px; }
+      #clocks .country { font-size:9px; margin:2px 0 4px; min-height:calc(var(--language-count,1)*12px); }
+      #clocks .country .translation-line { line-height:12px; }
+      #clocks .digital, #clocks .time-editor { font-size:24px; }
+      #clocks .clock-meta { margin-top:5px; min-height:calc(34px + (var(--language-count,1) - 1)*18px); }
+      #clocks .date { font-size:10px; margin-bottom:4px; }
+      #clocks .date .translation-line { line-height:15px; }
+      #clocks .zone { font-size:9px; }
+      .customize-layout { grid-template-columns:minmax(0,1fr) 110px; gap:18px; }
+      .settings-language { grid-template-columns:1fr 1fr; gap:10px; }
+      .settings-columns { gap:16px; }
+      .language-field, .setting-row { gap:8px; }
+      .settings-panel select { min-width:65px; }
+      .settings-heading h2 { font-size:20px; }
+    }
+    @media (max-height:450px) {
+      .page { padding-top:max(8px,env(safe-area-inset-top)); padding-bottom:max(8px,env(safe-area-inset-bottom)); }
+      .brand-name { font-size:24px; }
+      .brand-chinese { font-size:9px; }
+      main { padding:8px 0 20px; }
+      .bottom-actions { height:40px; }
+      .add-city { width:38px; height:38px; }
+      .settings-toggle, .support-button { bottom:max(9px,env(safe-area-inset-bottom)); }
+    }
   </style>
 </head>
 <body>
@@ -155,22 +255,29 @@
       <div class="actions"><button class="button icon-button" id="capture" aria-label="复制完整截图" title="复制完整截图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h4l1.5-2h5L16 6h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></button><button class="button icon-button" id="fullscreen" aria-label="进入全屏" title="全屏"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
     </header>
     <main>
-      <div class="clock-scroll" role="region" aria-label="世界时钟，可横向滚动" tabindex="0"><div class="clocks" id="clocks"></div></div>
+      <div class="clock-scroll" role="region" aria-label="世界时钟"><div class="clocks" id="clocks"></div></div>
     </main>
     <div class="bottom-actions"><button class="button add-city" id="add" aria-label="添加城市"><span aria-hidden="true">＋</span></button></div>
     <a class="button support-button" id="support" href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee" title="Buy me a coffee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h12v7a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5zM17 9h2a3 3 0 0 1 0 6h-2M4 22h15M8 3v2m4-3v3m4-2v2"/></svg></a>
     <button class="button settings-toggle" id="settings-toggle" aria-label="自定义" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="m9.5 3-.7 2.5-2.3 1L4 6l-1.5 2.5L4.3 11v2L2.5 15.5 4 18l2.5-.5 2.3 1 .7 2.5h5l.7-2.5 2.3-1 2.5.5 1.5-2.5-1.8-2.5v-2l1.8-2.5L20 6l-2.5.5-2.3-1-.7-2.5z"/><circle cx="12" cy="12" r="3"/></svg></button>
     <section class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1" hidden>
       <div class="settings-heading"><h2 id="settings-title" data-i18n="settings">自定义</h2><button class="close" id="settings-close" aria-label="关闭自定义">×</button></div>
-      <div class="customize-layout"><div class="customize-content">
+      <div class="settings-body"><div class="customize-layout"><div class="customize-content">
       <div class="settings-language">
         <label class="language-field"><span data-i18n="language">语言</span><select id="primary-language" aria-label="语言"></select></label>
         <label class="setting-row"><span data-i18n="multilingual">多语言显示</span><input type="checkbox" role="switch" id="multilingual"></label>
         <label class="language-field" id="secondary-field" hidden><span data-i18n="secondLanguage">第二语言</span><select id="secondary-language" aria-label="第二语言"></select></label>
         <label class="language-field" id="third-field" hidden><span data-i18n="thirdLanguage">第三语言</span><select id="third-language" aria-label="第三语言"></select></label>
+        <div class="setting-row translation-filter" id="translation-filter" hidden><span class="translation-filter-label"><label for="deduplicate-translations" id="deduplicate-label" data-i18n="deduplicateTranslations">删除重叠翻译（推荐）</label><span class="setting-info"><button type="button" id="translation-info-button" aria-describedby="translation-info" aria-label="删除重叠翻译说明">i</button><span class="setting-tooltip" id="translation-info" role="tooltip" data-i18n="deduplicateInfo">同一内容在多种语言中写法相同时，只保留首次出现的一项。例如英语和法语的 France 只显示一次；不同的译名仍会保留。</span></span></span><input type="checkbox" role="switch" id="deduplicate-translations" aria-labelledby="deduplicate-label"></div>
+      </div>
+      <div class="behavior-settings">
+        <label class="setting-row"><span data-i18n="animations">动画效果（推荐）</span><input type="checkbox" role="switch" id="animations"></label>
+        <label class="setting-row"><span data-i18n="mergeTimezones">合并相同时区（推荐）</span><input type="checkbox" role="switch" id="merge-timezones"></label>
       </div>
       <div class="settings-columns">
         <fieldset><legend data-i18n="clockContent">时间</legend>
+          <label class="setting-row"><span data-i18n="local">当地时间</span><input type="checkbox" role="switch" data-enabled="localTime" aria-controls="local-time-options"></label>
+          <div class="clock-options" id="local-time-options"><label class="setting-row"><span data-i18n="showLocalTimeText">显示文字</span><input type="checkbox" role="switch" data-enabled="localTimeText"></label></div>
           <label class="setting-row"><span data-i18n="analog">时钟</span><input type="checkbox" role="switch" data-enabled="analog" aria-controls="clock-options"></label>
           <div class="clock-options" id="clock-options">
             <label class="setting-row"><span data-i18n="secondHand">秒针</span><input type="checkbox" role="switch" data-enabled="secondHand"></label>
@@ -196,7 +303,18 @@
         </fieldset>
       </div>
       </div><aside class="settings-preview" id="settings-preview" aria-label="当地时间预览"></aside></div>
+      <div id="experimental-features" data-experimental>
+        <label class="setting-row"><span><span data-i18n="rightDragReorder">右键拖拽时钟</span><small data-i18n="rightDragHint">按住鼠标右键拖到另一个时钟上，交换位置。</small></span><input type="checkbox" role="switch" id="right-drag-reorder"></label>
+        <label class="setting-row"><span data-i18n="autoSort">自动排序</span><input type="checkbox" role="switch" id="auto-sort" aria-controls="sorting-options"></label>
+        <div class="clock-options" id="sorting-options" hidden>
+          <label class="language-field"><span data-i18n="sortBy">依据</span><select id="sort-by" aria-label="依据"><option value="timezone" data-i18n="sortTimezone">时区</option><option value="city" data-i18n="sortCity">城市首字母</option></select></label>
+          <label class="language-field"><span data-i18n="sortDirection">顺序</span><select id="sort-direction" aria-label="顺序"><option value="asc" data-i18n="sortAscending">升序（croissant）</option><option value="desc" data-i18n="sortDescending">降序（décroissant）</option></select></label>
+        </div>
+      </div>
       <p class="developer-note"><span data-i18n="developerBefore">如果你喜欢这个时钟，不妨点击</span><a href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" data-i18n="developerLink">这里</a><span data-i18n="developerAfter">来看一下开发者是谁吧</span></p>
+      </div>
+      <div class="settings-footer"><span class="settings-version">v0.1.0</span><label class="developer-mode-toggle"><span data-i18n="developerOptions">开发者选项</span><input type="checkbox" role="switch" id="developer-options" aria-label="开发者选项" aria-controls="experimental-features"></label></div>
+      <dialog id="developer-confirm" aria-labelledby="developer-confirm-title" aria-describedby="developer-confirm-message"><h3 id="developer-confirm-title" data-i18n="enableDeveloper">开启开发者选项</h3><p id="developer-confirm-message" data-i18n="developerWarning">开启后会多出很多奇奇怪怪的选项，很可能会有 bug 或者设计不好的地方，请谨慎开启。</p><form method="dialog"><button class="button" value="cancel" autofocus data-i18n="cancelDeveloper">取消</button><button class="button" value="enable" data-i18n="confirmDeveloper">仍然开启</button></form></dialog>
     </section>
   </div>
   <div class="capture-status" id="capture-status" role="status" hidden></div>
@@ -247,9 +365,9 @@
     const languageOptions={zh:'简体中文',en:'English',fr:'Français'};
     const locales={zh:'zh-CN',en:'en-GB',fr:'fr-FR'};
     const messages={
-      zh:{settings:'自定义',closeSettings:'关闭自定义',language:'语言',multilingual:'多语言显示',secondLanguage:'第二语言',thirdLanguage:'第三语言',none:'不显示',clockContent:'时间',pageControls:'页面控件',analog:'时钟',city:'城市',country:'国家',digital:'数字时钟',date:'日期',zone:'时区',customizeButton:'自定义按钮',addButton:'加号按钮',fullscreenButton:'全屏按钮',title:'标题',bottomHint:'（鼠标移到底部时显示）',topHint:'（鼠标移到顶部时显示）',local:'当地时间',add:'添加城市',addTitle:'添加一个城市',close:'关闭',search:'搜索城市或时区，例如：伦敦、Tokyo',noResults:'没有找到可添加的城市，请尝试其他名称或时区。',fullscreen:'进入全屏',exitFullscreen:'退出全屏',fullscreenUnavailable:'当前浏览器不支持全屏',nextDay:'明天',previousDay:'昨天',daysAfter:'{n} 天后',daysBefore:'{n} 天前',nextDate:'次日',previousDate:'前日',remove:'移除 {city}',clockInstructions:'{city}时钟，上下拖动或滚轮调整时间，方向键按五分钟刻度调整',clockRegion:'世界时钟，可横向滚动'},
-      en:{settings:'Customize',closeSettings:'Close customization',language:'Language',multilingual:'Multiple languages',secondLanguage:'Second language',thirdLanguage:'Third language',none:'None',clockContent:'Time',pageControls:'Page controls',analog:'Clock',city:'City',country:'Country',digital:'Digital clock',date:'Date',zone:'Time zone',customizeButton:'Customize button',addButton:'Add button',fullscreenButton:'Fullscreen button',title:'Title',bottomHint:'(Shown when the pointer moves to the bottom)',topHint:'(Shown when the pointer moves to the top)',local:'Local time',add:'Add city',addTitle:'Add a city',close:'Close',search:'Search a city or time zone, e.g. London, Tokyo',noResults:'No cities found. Try another name or time zone.',fullscreen:'Enter fullscreen',exitFullscreen:'Exit fullscreen',fullscreenUnavailable:'Fullscreen is unavailable in this browser',nextDay:'Tomorrow',previousDay:'Yesterday',daysAfter:'{n} days later',daysBefore:'{n} days earlier',nextDate:'next day',previousDate:'previous day',remove:'Remove {city}',clockInstructions:'{city} clock. Drag or scroll vertically to adjust time. Arrow keys adjust on five-minute marks.',clockRegion:'World clocks, scroll horizontally'},
-      fr:{settings:'Personnaliser',closeSettings:'Fermer la personnalisation',language:'Langue',multilingual:'Affichage multilingue',secondLanguage:'Deuxième langue',thirdLanguage:'Troisième langue',none:'Aucune',clockContent:'Heure',pageControls:'Commandes de la page',analog:'Horloge',city:'Ville',country:'Pays',digital:'Heure numérique',date:'Date',zone:'Fuseau horaire',customizeButton:'Bouton de personnalisation',addButton:'Bouton +',fullscreenButton:'Bouton plein écran',title:'Titre',bottomHint:'(Visible en déplaçant la souris vers le bas)',topHint:'(Visible en déplaçant la souris vers le haut)',local:'Heure locale',add:'Ajouter une ville',addTitle:'Ajouter une ville',close:'Fermer',search:'Rechercher une ville ou un fuseau, ex. Paris, Tokyo',noResults:'Aucune ville trouvée. Essayez un autre nom ou fuseau.',fullscreen:'Activer le plein écran',exitFullscreen:'Quitter le plein écran',fullscreenUnavailable:'Le plein écran est indisponible',nextDay:'Demain',previousDay:'Hier',daysAfter:'{n} jours après',daysBefore:'{n} jours avant',nextDate:'lendemain',previousDate:'veille',remove:'Supprimer {city}',clockInstructions:'Horloge de {city}. Glisser ou faire défiler verticalement pour régler l’heure. Les flèches suivent les repères de cinq minutes.',clockRegion:'Horloges du monde, défilement horizontal'}
+      zh:{settings:'自定义',closeSettings:'关闭自定义',language:'语言',multilingual:'多语言显示',secondLanguage:'第二语言',thirdLanguage:'第三语言',none:'不显示',clockContent:'时间',pageControls:'页面控件',analog:'时钟',city:'城市',country:'国家',digital:'数字时钟',date:'日期',zone:'时区',customizeButton:'自定义按钮',addButton:'加号按钮',fullscreenButton:'全屏按钮',title:'标题',bottomHint:'（鼠标移到底部时显示）',topHint:'（鼠标移到顶部时显示）',local:'当地时间',add:'添加城市',addTitle:'添加一个城市',close:'关闭',search:'搜索城市或时区，例如：伦敦、Tokyo',noResults:'没有找到可添加的城市，请尝试其他名称或时区。',fullscreen:'进入全屏',exitFullscreen:'退出全屏',fullscreenUnavailable:'当前浏览器不支持全屏',nextDay:'明天',previousDay:'昨天',daysAfter:'{n} 天后',daysBefore:'{n} 天前',nextDate:'次日',previousDate:'前日',remove:'移除 {city}',clockInstructions:'{city}时钟，上下拖动或滚轮调整时间，方向键按五分钟刻度调整',clockRegion:'世界时钟'},
+      en:{settings:'Customize',closeSettings:'Close customization',language:'Language',multilingual:'Multiple languages',secondLanguage:'Second language',thirdLanguage:'Third language',none:'None',clockContent:'Time',pageControls:'Page controls',analog:'Clock',city:'City',country:'Country',digital:'Digital clock',date:'Date',zone:'Time zone',customizeButton:'Customize button',addButton:'Add button',fullscreenButton:'Fullscreen button',title:'Title',bottomHint:'(Shown when the pointer moves to the bottom)',topHint:'(Shown when the pointer moves to the top)',local:'Local time',add:'Add city',addTitle:'Add a city',close:'Close',search:'Search a city or time zone, e.g. London, Tokyo',noResults:'No cities found. Try another name or time zone.',fullscreen:'Enter fullscreen',exitFullscreen:'Exit fullscreen',fullscreenUnavailable:'Fullscreen is unavailable in this browser',nextDay:'Tomorrow',previousDay:'Yesterday',daysAfter:'{n} days later',daysBefore:'{n} days earlier',nextDate:'next day',previousDate:'previous day',remove:'Remove {city}',clockInstructions:'{city} clock. Drag or scroll vertically to adjust time. Arrow keys adjust on five-minute marks.',clockRegion:'World clocks'},
+      fr:{settings:'Personnaliser',closeSettings:'Fermer la personnalisation',language:'Langue',multilingual:'Affichage multilingue',secondLanguage:'Deuxième langue',thirdLanguage:'Troisième langue',none:'Aucune',clockContent:'Heure',pageControls:'Commandes de la page',analog:'Horloge',city:'Ville',country:'Pays',digital:'Heure numérique',date:'Date',zone:'Fuseau horaire',customizeButton:'Bouton de personnalisation',addButton:'Bouton +',fullscreenButton:'Bouton plein écran',title:'Titre',bottomHint:'(Visible en déplaçant la souris vers le bas)',topHint:'(Visible en déplaçant la souris vers le haut)',local:'Heure locale',add:'Ajouter une ville',addTitle:'Ajouter une ville',close:'Fermer',search:'Rechercher une ville ou un fuseau, ex. Paris, Tokyo',noResults:'Aucune ville trouvée. Essayez un autre nom ou fuseau.',fullscreen:'Activer le plein écran',exitFullscreen:'Quitter le plein écran',fullscreenUnavailable:'Le plein écran est indisponible',nextDay:'Demain',previousDay:'Hier',daysAfter:'{n} jours après',daysBefore:'{n} jours avant',nextDate:'lendemain',previousDate:'veille',remove:'Supprimer {city}',clockInstructions:'Horloge de {city}. Glisser ou faire défiler verticalement pour régler l’heure. Les flèches suivent les repères de cinq minutes.',clockRegion:'Horloges du monde'}
     };
     Object.assign(messages.zh,{hours:'小时',minutes:'分钟',seconds:'秒钟',editTime:'编辑 {city} 时间'});
     Object.assign(messages.en,{hours:'Hours',minutes:'Minutes',seconds:'Seconds',editTime:'Edit time in {city}'});
@@ -269,6 +387,21 @@
     Object.assign(messages.zh,{developerBefore:'如果你喜欢这个时钟，不妨点击',developerLink:'这里',developerAfter:'来看一下开发者是谁吧'});
     Object.assign(messages.en,{developerBefore:'If you like this clock, click ',developerLink:'here',developerAfter:' to meet the developer.'});
     Object.assign(messages.fr,{developerBefore:'Si cette horloge vous plaît, cliquez ',developerLink:'ici',developerAfter:' pour découvrir son créateur.'});
+    Object.assign(messages.zh,{deduplicateTranslations:'删除重叠翻译（推荐）',deduplicateInfo:'同一内容在多种语言中写法相同时，只保留首次出现的一项。例如英语和法语的 France 只显示一次；不同的译名仍会保留。',deduplicateInfoLabel:'删除重叠翻译说明',animations:'动画效果（推荐）',mergeTimezones:'合并相同时区（推荐）'});
+    Object.assign(messages.en,{deduplicateTranslations:'Remove duplicate translations (recommended)',deduplicateInfo:'When translations of the same content are identical, show only the first occurrence. For example, France appears once in English and French. Distinct translations remain visible.',deduplicateInfoLabel:'About duplicate translations',animations:'Animations (recommended)',mergeTimezones:'Merge matching time zones (recommended)'});
+    Object.assign(messages.fr,{deduplicateTranslations:'Supprimer les traductions identiques (recommandé)',deduplicateInfo:'Si plusieurs langues utilisent la même traduction, seule la première apparaît. Par exemple, France ne s’affiche qu’une fois en anglais et en français. Les traductions différentes sont conservées.',deduplicateInfoLabel:'À propos des traductions identiques',animations:'Animations (recommandé)',mergeTimezones:'Fusionner les fuseaux identiques (recommandé)'});
+    Object.assign(messages.zh,{developerOptions:'开发者选项',enableDeveloper:'开启开发者选项',developerWarning:'开启后会多出很多奇奇怪怪的选项，很可能会有 bug 或者设计不好的地方，请谨慎开启。',cancelDeveloper:'取消',confirmDeveloper:'仍然开启'});
+    Object.assign(messages.en,{developerOptions:'Developer options',enableDeveloper:'Enable developer options',developerWarning:'Enabling this mode adds all sorts of unusual options. They may contain bugs or rough designs. Please enable with caution.',cancelDeveloper:'Cancel',confirmDeveloper:'Enable anyway'});
+    Object.assign(messages.fr,{developerOptions:'Options développeur',enableDeveloper:'Activer les options développeur',developerWarning:'Ce mode ajoute toutes sortes d’options inhabituelles. Elles peuvent contenir des bugs ou des défauts de conception. Activez-le avec prudence.',cancelDeveloper:'Annuler',confirmDeveloper:'Activer quand même'});
+    Object.assign(messages.zh,{rightDragReorder:'右键拖拽时钟',rightDragHint:'按住鼠标右键拖到另一个时钟上，交换位置。'});
+    Object.assign(messages.en,{rightDragReorder:'Reorder clocks with right drag',rightDragHint:'Hold the right mouse button and drag onto another clock to swap positions.'});
+    Object.assign(messages.fr,{rightDragReorder:'Déplacer les horloges avec le clic droit',rightDragHint:'Maintenez le bouton droit et faites glisser sur une autre horloge pour échanger leurs places.'});
+    Object.assign(messages.zh,{showLocalTimeText:'显示文字'});
+    Object.assign(messages.en,{showLocalTimeText:'Show label'});
+    Object.assign(messages.fr,{showLocalTimeText:'Afficher le texte'});
+    Object.assign(messages.zh,{autoSort:'自动排序',sortClocks:'排序时钟',sortBy:'依据',sortTimezone:'时区',sortCity:'城市首字母',sortDirection:'顺序',sortAscending:'升序（croissant）',sortDescending:'降序（décroissant）'});
+    Object.assign(messages.en,{autoSort:'Automatic sorting',sortClocks:'Sort clocks',sortBy:'Sort by',sortTimezone:'Time zone',sortCity:'City name (A–Z)',sortDirection:'Order',sortAscending:'Ascending',sortDescending:'Descending'});
+    Object.assign(messages.fr,{autoSort:'Tri automatique',sortClocks:'Trier les horloges',sortBy:'Critère',sortTimezone:'Fuseau horaire',sortCity:'Nom de ville (A–Z)',sortDirection:'Ordre',sortAscending:'Croissant',sortDescending:'Décroissant'});
     const cityNames={
       paris:{zh:'巴黎',en:'Paris',fr:'Paris',region:'FR'},
       waterloo:{zh:'滑铁卢',en:'Waterloo',fr:'Waterloo',region:'CA'},
@@ -283,14 +416,18 @@
       'hong-kong':{zh:'香港',en:'Hong Kong',fr:'Hong Kong',region:'CN'},
       dubai:{zh:'迪拜',en:'Dubai',fr:'Dubaï',region:'AE'}
     };
-    const enabledKeys=['analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','title','support'];
-    const settings={version:2,language:'zh',multilingual:false,secondLanguage:'en',thirdLanguage:'',enabled:Object.fromEntries(enabledKeys.map(key=>[key,true])),numeralCount:12,numeralPosition:'outside'};
+    const enabledKeys=['localTime','localTimeText','analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','title','support'];
+    const settings={version:2,language:'zh',multilingual:false,secondLanguage:'en',thirdLanguage:'',deduplicateTranslations:true,animations:true,mergeTimezones:true,developerMode:false,rightDragReorder:false,autoSort:false,sortBy:'timezone',sortDirection:'asc',enabled:Object.fromEntries(enabledKeys.map(key=>[key,!['country','date'].includes(key)])),numeralCount:12,numeralPosition:'outside'};
     try {
       const saved=JSON.parse(localStorage.getItem('be-present-settings'));
       if (saved && typeof saved==='object') {
         for (const key of ['language','secondLanguage']) if (Object.hasOwn(languageOptions,saved[key])) settings[key]=saved[key];
         if (saved.thirdLanguage==='' || Object.hasOwn(languageOptions,saved.thirdLanguage)) settings.thirdLanguage=saved.thirdLanguage;
         if (typeof saved.multilingual==='boolean') settings.multilingual=saved.multilingual;
+        for(const key of ['deduplicateTranslations','animations','mergeTimezones','developerMode','rightDragReorder','autoSort'])if(typeof saved[key]==='boolean')settings[key]=saved[key];
+        if(typeof saved.autoSort!=='boolean' && typeof saved.sortingButton==='boolean')settings.autoSort=saved.sortingButton;
+        if(['timezone','city'].includes(saved.sortBy))settings.sortBy=saved.sortBy;
+        if(['asc','desc'].includes(saved.sortDirection))settings.sortDirection=saved.sortDirection;
         for (const key of enabledKeys) {
           if (typeof saved.enabled?.[key]==='boolean') settings.enabled[key]=saved.enabled[key];
           else if (typeof saved.hide?.[key]==='boolean') settings.enabled[key]=!saved.hide[key];
@@ -311,6 +448,14 @@
       return localizedDates.get(key).format(date);
     }
     function renderLines(element,lines) {
+      if(settings.deduplicateTranslations) {
+        const seen=new Set();
+        lines=lines.filter(text=>{
+          const normalized=text.normalize('NFC').trim().replace(/\s+/gu,' ');
+          if(seen.has(normalized))return false;
+          seen.add(normalized);return true;
+        });
+      }
       const key=JSON.stringify(lines);
       if (element.dataset.lines===key) return;
       element.dataset.lines=key;
@@ -345,8 +490,25 @@
       document.getElementById('multilingual').checked=settings.multilingual;
       document.getElementById('secondary-field').hidden=!settings.multilingual;
       document.getElementById('third-field').hidden=!settings.multilingual;
+      document.getElementById('translation-filter').hidden=!settings.multilingual;
+      document.getElementById('deduplicate-translations').checked=settings.deduplicateTranslations;
+      document.getElementById('translation-info-button').setAttribute('aria-label',t('deduplicateInfoLabel'));
+      document.getElementById('developer-options').setAttribute('aria-label',t('developerOptions'));
+      document.getElementById('developer-options').checked=settings.developerMode;
+      document.getElementById('right-drag-reorder').checked=settings.rightDragReorder;
+      document.getElementById('auto-sort').checked=settings.autoSort;
+      document.getElementById('auto-sort').setAttribute('aria-expanded',String(settings.autoSort));
+      document.getElementById('sorting-options').hidden=!settings.autoSort;
+      document.getElementById('sort-by').value=settings.sortBy;
+      document.getElementById('sort-direction').value=settings.sortDirection;
+      document.getElementById('sort-by').setAttribute('aria-label',t('sortBy'));
+      document.getElementById('sort-direction').setAttribute('aria-label',t('sortDirection'));
+      document.getElementById('animations').checked=settings.animations;
+      document.getElementById('merge-timezones').checked=settings.mergeTimezones;
       for (const input of document.querySelectorAll('[data-enabled]')) input.checked=settings.enabled[input.dataset.enabled];
       document.getElementById('clock-options').hidden=!settings.enabled.analog;
+      document.getElementById('local-time-options').hidden=!settings.enabled.localTime;
+      document.querySelector('[data-enabled="localTime"]').setAttribute('aria-expanded',String(settings.enabled.localTime));
       document.querySelector('[data-enabled="analog"]').setAttribute('aria-expanded',String(settings.enabled.analog));
       document.getElementById('numeral-options').hidden=!settings.enabled.numerals;
       document.querySelector('[data-enabled="numerals"]').setAttribute('aria-expanded',String(settings.enabled.numerals));
@@ -367,7 +529,18 @@
       search.placeholder=t('search');search.setAttribute('aria-label',t('search'));
       document.querySelector('.clock-scroll').setAttribute('aria-label',t('clockRegion'));
     }
+    const developerConfirm=document.getElementById('developer-confirm');
+    document.getElementById('developer-options').onchange=event=>{
+      if(!event.target.checked) {settings.developerMode=false;applySettings();return;}
+      event.target.checked=false;
+      developerConfirm.returnValue='';developerConfirm.showModal();
+    };
+    developerConfirm.addEventListener('close',()=>{
+      if(developerConfirm.returnValue==='enable') {settings.developerMode=true;applySettings();}
+      document.getElementById('developer-options').focus({preventScroll:true});
+    });
     function setSettingsOpen(open) {
+      if(open)finishClockReorder(false);
       if(open && timeEdit)finishTimeEdit();
       if(open && activeDrag){const drag=activeDrag;activeDrag=null;drag.card.classList.remove('dragging');if(drag.card.hasPointerCapture(drag.pointerId))drag.card.releasePointerCapture(drag.pointerId);}
       if(open && settingsPanel.hidden)previousBodyOverflow=document.body.style.overflow;
@@ -381,6 +554,7 @@
       (open?settingsPanel:settingsToggle).focus({preventScroll:true});
     }
     settingsPanel.addEventListener('keydown',event=>{
+      if(developerConfirm.open)return;
       if(event.key!=='Tab')return;
       const controls=[...settingsPanel.querySelectorAll('button,input,select,[tabindex="0"]')].filter(element=>!element.disabled && element.getClientRects().length);
       const first=controls[0],last=controls[controls.length-1];
@@ -388,8 +562,11 @@
       else if(!event.shiftKey && (document.activeElement===last || document.activeElement===settingsPanel)){event.preventDefault();first.focus();}
     });
     function applySettings() {
+      if(settings.autoSort)settings.rightDragReorder=false;
       normalizeLanguages();
       for (const key of enabledKeys) page.classList.toggle(`hide-${key}`,!settings.enabled[key]);
+      page.classList.toggle('disable-animations',!settings.animations);
+      page.classList.toggle('developer-mode',settings.developerMode);
       page.style.setProperty('--language-count',displayLanguages().length);
       updateLanguageUI();render();
       try { localStorage.setItem('be-present-settings',JSON.stringify(settings)); } catch {}
@@ -400,6 +577,23 @@
       document.getElementById(id).onchange=event=>{settings[key]=event.target.value;applySettings();};
     }
     document.getElementById('multilingual').onchange=event=>{settings.multilingual=event.target.checked;applySettings();};
+    for(const [id,key] of [['deduplicate-translations','deduplicateTranslations'],['animations','animations'],['merge-timezones','mergeTimezones'],['right-drag-reorder','rightDragReorder'],['auto-sort','autoSort']]) {
+      document.getElementById(id).onchange=event=>{
+        settings[key]=event.target.checked;
+        if(event.target.checked && key==='rightDragReorder')settings.autoSort=false;
+        if(event.target.checked && key==='autoSort')settings.rightDragReorder=false;
+        if(event.target.checked && ['animations','mergeTimezones'].includes(key) && settings.animations && settings.mergeTimezones) {
+          const date=new Date();
+          for(let i=0;i<cities.length;i++)for(let j=i+1;j<cities.length;j++) {
+            if(clockOffset(cities[i],date)===clockOffset(cities[j],date))pendingFusionPairs.add(fusionPairKey(cities[i],cities[j]));
+          }
+        }
+        applySettings();
+      };
+    }
+    for(const [id,key] of [['sort-by','sortBy'],['sort-direction','sortDirection']]) {
+      document.getElementById(id).onchange=event=>{settings[key]=event.target.value;applySettings();};
+    }
     for (const input of document.querySelectorAll('[data-enabled]')) input.onchange=()=>{settings.enabled[input.dataset.enabled]=input.checked;applySettings();};
     document.getElementById('numeral-count').onchange=event=>{settings.numeralCount=Number(event.target.value);applySettings();};
     document.getElementById('numeral-position').onchange=event=>{settings.numeralPosition=event.target.value;applySettings();};
@@ -443,11 +637,7 @@
     }
     async function createScreenshotBlob() {
       if (timeEdit) finishTimeEdit();
-      const padding=getComputedStyle(page);
-      const row=document.querySelector('.clocks');
-      const rowWidth=[...row.children].reduce((sum,card)=>sum+parseFloat(getComputedStyle(card).width),0)+Math.max(0,row.children.length-1)*parseFloat(getComputedStyle(row).columnGap);
-      const naturalWidth=rowWidth+parseFloat(padding.paddingLeft)+parseFloat(padding.paddingRight);
-      const width=naturalWidth<=page.offsetWidth+1?page.offsetWidth:Math.ceil(naturalWidth);
+      const width=page.offsetWidth;
       const host=document.createElement('div');
       host.className='capture-host';
       host.style.cssText=`position:fixed;left:-100000px;top:0;width:${width}px;pointer-events:none;`;
@@ -742,10 +932,315 @@
         } else if (event.key==='Home') { event.preventDefault(); resetPreview(); }
       });
     }
+    let fusionRevision=0;
+    let fusionTimer;
+    let zoneSignature='';
+    const fusionAnimations=new Set();
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+    function animationsEnabled() { return settings.animations && !reducedMotion.matches; }
+    const fusedPairs=new Set();
+    const pendingFusionPairs=new Set();
+    let pendingRemoval=null;
+    let clockReorder=null;
+    function rightDragEnabled() { return settings.developerMode && settings.rightDragReorder && !settings.autoSort; }
+    function finishClockReorder(commit) {
+      const drag=clockReorder;
+      if(!drag)return;
+      clockReorder=null;
+      drag.ghost?.remove();drag.card.classList.remove('reorder-source');drag.target?.classList.remove('reorder-target');
+      if(drag.card.hasPointerCapture(drag.pointerId))drag.card.releasePointerCapture(drag.pointerId);
+      if(!commit || !drag.moved || !drag.target?.isConnected || !drag.card.isConnected){scheduleViewportLayout();return;}
+      const positions=new Map(cities.filter(city=>city.el).map(city=>[city.id,city.el.getBoundingClientRect()]));
+      const cards=[...container.children],groups=cards.map(card=>cities.filter(city=>city.el===card));
+      const from=cards.indexOf(drag.card),to=cards.indexOf(drag.target),selected=groups[from][0];
+      [groups[from],groups[to]]=[groups[to],groups[from]];
+      const visible=new Set(groups.flat());
+      cities=[...groups.flat(),...cities.filter(city=>!visible.has(city))];
+      save();render();fitViewportLayout();animateClockPositions(positions);
+      selected.el?.focus({preventScroll:true});
+    }
+    function bindClockReordering(card) {
+      card.addEventListener('contextmenu',event=>{
+        if(rightDragEnabled() && !event.target.closest('button,input,select'))event.preventDefault();
+      });
+      card.addEventListener('pointerdown',event=>{
+        if(event.button!==2 || !rightDragEnabled() || clockReorder || activeDrag || pendingRemoval || picker.open || !settingsPanel.hidden || document.querySelector('.fusion-overlay') || event.target.closest('button,input,select'))return;
+        event.preventDefault();closeRemoveMenus();if(timeEdit)finishTimeEdit();
+        clockReorder={card,pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false,target:null,ghost:null};
+        card.setPointerCapture(event.pointerId);
+      });
+      card.addEventListener('pointermove',event=>{
+        const drag=clockReorder;
+        if(!drag || drag.card!==card || drag.pointerId!==event.pointerId)return;
+        if(!(event.buttons&2)){finishClockReorder(false);return;}
+        const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+        if(!drag.moved && Math.hypot(dx,dy)<5)return;
+        if(!drag.moved) {
+          drag.moved=true;drag.ghost=clockGhost(card);drag.ghost.classList.add('reorder-overlay');
+          document.body.append(drag.ghost);card.classList.add('reorder-source');
+        }
+        drag.ghost.style.transform=`translate(${dx}px,${dy}px)`;
+        const target=[...container.children].find(other=>{
+          if(other===card)return false;
+          const rect=other.getBoundingClientRect();
+          return event.clientX>=rect.left && event.clientX<=rect.right && event.clientY>=rect.top && event.clientY<=rect.bottom;
+        }) || null;
+        if(target!==drag.target){drag.target?.classList.remove('reorder-target');drag.target=target;target?.classList.add('reorder-target');}
+      });
+      card.addEventListener('pointerup',event=>{if(clockReorder?.pointerId===event.pointerId && event.button===2)finishClockReorder(true);});
+      for(const type of ['pointercancel','lostpointercapture'])card.addEventListener(type,event=>{if(clockReorder?.pointerId===event.pointerId)finishClockReorder(false);});
+    }
+    window.addEventListener('blur',()=>finishClockReorder(false));
+    try {
+      const saved=JSON.parse(localStorage.getItem('be-present-fused-pairs'));
+      if(Array.isArray(saved))for(const pair of saved)if(typeof pair==='string')fusedPairs.add(pair);
+    } catch {}
+    function fusionPairKey(a,b) { return JSON.stringify([a.id,b.id].sort()); }
+    function rememberFusion(card) {
+      const members=cities.filter(city=>city.el===card);
+      for(let i=0;i<members.length;i++)for(let j=i+1;j<members.length;j++) {
+        const key=fusionPairKey(members[i],members[j]);
+        fusedPairs.add(key);pendingFusionPairs.delete(key);
+      }
+      try {localStorage.setItem('be-present-fused-pairs',JSON.stringify([...fusedPairs]));} catch {}
+    }
+    function closeRemoveMenus() {
+      for(const actions of container.querySelectorAll('.remove-actions.is-open')) {
+        actions.classList.remove('is-open');
+        actions.querySelector('.remove').setAttribute('aria-expanded','false');
+        actions.querySelector('.remove-menu').hidden=true;
+      }
+    }
+    document.addEventListener('pointerdown',event=>{if(!event.target.closest('.remove-actions'))closeRemoveMenus();});
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape') {
+        if(clockReorder){event.preventDefault();event.stopImmediatePropagation();finishClockReorder(false);return;}
+        const trigger=container.querySelector('.remove-actions.is-open .remove');
+        if(trigger){event.preventDefault();event.stopImmediatePropagation();closeRemoveMenus();trigger.focus();}
+      }
+    },true);
+    function animateFusion(element,frames,options) {
+      const animation=element.animate(frames,{fill:'both',...options});
+      fusionAnimations.add(animation);
+      animation.finished.catch(()=>{}).finally(()=>{fusionAnimations.delete(animation);animation.cancel();});
+      return animation;
+    }
+    function clockGhost(source) {
+      const rect=source.getBoundingClientRect();
+      const ghost=document.createElement('div');ghost.className='fusion-overlay';ghost.setAttribute('aria-hidden','true');ghost.inert=true;
+      Object.assign(ghost.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});
+      const clone=source.cloneNode(true);
+      const originals=[source,...source.querySelectorAll('*')],copies=[clone,...clone.querySelectorAll('*')];
+      originals.forEach((element,index)=>{
+        const style=getComputedStyle(element);
+        for(const property of ['font-size','line-height','letter-spacing','margin-top','margin-bottom','min-height','height','max-width','display'])copies[index].style.setProperty(property,style.getPropertyValue(property));
+      });
+      Object.assign(clone.style,{width:source.offsetWidth+'px',transform:`scale(${rect.width/source.offsetWidth})`});
+      ghost.append(clone);
+      return ghost;
+    }
+    function animateClockPositions(positions) {
+      if(!animationsEnabled())return;
+      for(const card of container.children) {
+        const member=cities.find(city=>city.el===card && positions.has(city.id));
+        if(!member)continue;
+        const before=positions.get(member.id),after=card.getBoundingClientRect(),zoom=after.width/card.offsetWidth;
+        const rest=getComputedStyle(card).transform;
+        animateFusion(card,[{transform:`translate(${(before.left-after.left)/zoom}px,${(before.top-after.top)/zoom}px) scale(${before.width/after.width}) ${rest==='none'?'':rest}`},{transform:rest}],{duration:600,easing:'cubic-bezier(.22,1,.36,1)'});
+      }
+    }
+    async function removeCityWithAnimation(city) {
+      if(pendingRemoval || city.id==='paris' || !cities.includes(city))return;
+      const source=city.el;
+      const focused=source.contains(document.activeElement);
+      const remaining=cities.find(item=>item!==city && item.el===source);
+      const positions=new Map(cities.filter(item=>item!==city && item.el).map(item=>[item.id,item.el.getBoundingClientRect()]));
+      closeRemoveMenus();
+      const ghost=animationsEnabled()?clockGhost(source):null;
+      if(ghost) {
+        ghost.classList.add('removal-overlay');
+        renderLines(ghost.querySelector('.city'),displayLanguages().map(lang=>cityName(city,lang)));
+        renderLines(ghost.querySelector('.country'),displayLanguages().map(lang=>countryName(city,lang)));
+        ghost.querySelector('.clock-label').replaceChildren();
+      }
+      cities=cities.filter(item=>item!==city);save();
+      if(!ghost) {render();fitViewportLayout();return;}
+      const removal=pendingRemoval={phase:'disappearing'};
+      clearTimeout(fusionTimer);
+      zoneSignature=currentZoneSignature();
+      // Keep the old grid slots, including the empty slot, until the exit and pause finish.
+      container.style.gridTemplateRows=getComputedStyle(container).gridTemplateRows;
+      if(remaining)refreshGroup(source);
+      else {source.style.visibility='hidden';source.inert=true;}
+      if(focused)(remaining?.el || cities.find(item=>item.el)?.el)?.focus({preventScroll:true});
+      document.body.append(ghost);
+      const particles=burstFusion(ghost.querySelector('.clock-card'),true);
+      // A small, stationary tremble settles before the clock fades away.
+      const disappearance=animateFusion(ghost,[
+        {transform:'translateX(0)',opacity:1,filter:'blur(0px)'},
+        {offset:.08,transform:'translateX(-2px)',opacity:1},
+        {offset:.16,transform:'translateX(2px)',opacity:1},
+        {offset:.24,transform:'translateX(-2px)',opacity:1},
+        {offset:.32,transform:'translateX(1.5px)',opacity:1},
+        {offset:.4,transform:'translateX(-1px)',opacity:1},
+        {offset:.48,transform:'translateX(0)',opacity:1,filter:'blur(0px)'},
+        {transform:'translateX(0)',opacity:0,filter:'blur(3px)'}
+      ],{duration:850,easing:'linear'});
+      await disappearance.finished.catch(()=>{});ghost.remove();
+      await particles;
+      if(pendingRemoval!==removal)return;
+      removal.phase='waiting';
+      await new Promise(resolve=>setTimeout(resolve,1000));
+      if(pendingRemoval!==removal)return;
+      pendingRemoval=null;
+      render();fitViewportLayout();animateClockPositions(positions);
+      if(focused)(remaining?.el || container.firstElementChild)?.focus({preventScroll:true});
+    }
+    function clockOffset(city,date) {
+      return formatter(city.zone).offset.formatToParts(date).find(part=>part.type==='timeZoneName').value;
+    }
+    function sortCities() {
+      if(!settings.developerMode || !settings.autoSort)return;
+      const previous=cities.map(city=>city.id).join('|');
+      const collator=new Intl.Collator(locales[settings.language],{sensitivity:'base',numeric:true});
+      const now=new Date();
+      const offsetMinutes=city=>{
+        const parts=clockOffset(city,now).match(/([+-])(\d+)(?::(\d+))?$/);
+        return parts?(parts[1]==='-'?-1:1)*(Number(parts[2])*60+Number(parts[3] || 0)):0;
+      };
+      const direction=settings.sortDirection==='desc'?-1:1;
+      cities.sort((a,b)=>direction*((settings.sortBy==='timezone'?offsetMinutes(a)-offsetMinutes(b):0) || collator.compare(cityName(a),cityName(b)) || a.id.localeCompare(b.id)));
+      if(cities.map(city=>city.id).join('|')!==previous)save();
+    }
+    function currentZoneSignature() {
+      const date=new Date();
+      return cities.map(city=>city.id+':'+clockOffset(city,date)).join('|');
+    }
+    function refreshGroup(card) {
+      const members=cities.filter(city=>city.el===card);
+      const label=card.querySelector('.clock-label');label.replaceChildren();
+      if(members.some(city=>city.zone===localZone)) {
+        const home=document.createElement('span');home.className='home';home.textContent=t('local');label.append(home);
+      }
+      const name=members.map(city=>cityName(city)).join('/');
+      renderLines(card.querySelector('.city'),displayLanguages().map(lang=>members.map(city=>cityName(city,lang)).join('/')));
+      renderLines(card.querySelector('.country'),displayLanguages().map(lang=>members.map(city=>countryName(city,lang)).filter(Boolean).join('/')));
+      card.setAttribute('aria-label',t('clockInstructions').replace('{city}',name));
+      card.querySelector('.digital').setAttribute('aria-label',t('editTime').replace('{city}',name));
+      card.querySelector('.remove-actions')?.remove();
+      card.querySelector('.remove')?.remove();
+      const removable=members.filter(city=>city.id!=='paris');
+      if(!removable.length)return;
+      const actions=document.createElement('div');actions.className='remove-actions';
+      const remove=document.createElement('button');remove.className='remove';remove.textContent='×';
+      remove.title=remove.ariaLabel=t('remove').replace('{city}',name);
+      actions.append(remove);
+      const removeCity=city=>removeCityWithAnimation(city);
+      if(members.length===1)remove.onclick=()=>removeCity(removable[0]);
+      else {
+        const menu=document.createElement('div');menu.className='remove-menu';menu.hidden=true;menu.setAttribute('role','menu');
+        menu.setAttribute('aria-label',remove.ariaLabel);
+        remove.setAttribute('aria-haspopup','menu');remove.setAttribute('aria-expanded','false');
+        for(const city of removable) {
+          const option=document.createElement('button');option.textContent=cityName(city);option.setAttribute('role','menuitem');
+          option.ariaLabel=t('remove').replace('{city}',cityName(city));option.onclick=()=>removeCity(city);menu.append(option);
+        }
+        remove.onclick=()=>{
+          const open=menu.hidden;closeRemoveMenus();menu.hidden=!open;
+          actions.classList.toggle('is-open',open);remove.setAttribute('aria-expanded',String(open));
+          if(open)menu.firstElementChild.focus();
+        };
+        actions.addEventListener('keydown',event=>{
+          if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
+          event.preventDefault();event.stopPropagation();
+          if(menu.hidden)remove.click();
+          const items=[...menu.children],index=items.indexOf(document.activeElement);
+          items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowUp'?-1:1)+items.length)%items.length].focus();
+        });
+        actions.addEventListener('focusout',event=>{if(!actions.contains(event.relatedTarget))closeRemoveMenus();});
+        actions.append(menu);
+      }
+      card.append(actions);
+    }
+    function burstFusion(card,reverse=false) {
+      const effects=[];
+      const dial=card.querySelector('.dial');
+      const rect=(!settings.enabled.analog?card:dial).getBoundingClientRect();
+      const x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+      const diameter=Math.min(rect.width,rect.height);
+      const radius=Math.max(42,Math.min(140,diameter*.8));
+      const halo=document.createElement('i');halo.className='fusion-halo';halo.setAttribute('aria-hidden','true');
+      Object.assign(halo.style,{left:x+'px',top:y+'px',width:diameter*.85+'px',height:diameter*.85+'px'});document.body.append(halo);
+      const haloAnimation=animateFusion(halo,[{transform:'translate(-50%,-50%) scale(.65)',opacity:0},{offset:.12,opacity:.9},{transform:'translate(-50%,-50%) scale(1.6)',opacity:0}],{duration:1100,easing:'ease-out',direction:reverse?'reverse':'normal'});
+      effects.push(haloAnimation.finished);haloAnimation.finished.catch(()=>{}).finally(()=>halo.remove());
+      for(let i=0;i<44;i++) {
+        const particle=document.createElement('i');particle.className='fusion-particle';particle.setAttribute('aria-hidden','true');
+        const angle=i/44*Math.PI*2+(Math.random()-.5)*.13;
+        const distance=radius*(.7+Math.random()*.8),size=2.5+Math.random()*2;
+        Object.assign(particle.style,{left:x+'px',top:y+'px',width:size+'px',height:size+'px'});document.body.append(particle);
+        const dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
+        const particleAnimation=animateFusion(particle,[{transform:'translate(-50%,-50%) scale(1)',opacity:0},{offset:.08,transform:`translate(${dx*.15}px,${dy*.15}px) scale(1)`,opacity:1},{offset:.65,transform:`translate(${dx*.8}px,${dy*.8+10}px) scale(.75)`,opacity:.85},{transform:`translate(${dx}px,${dy+22}px) scale(.1)`,opacity:0}],{duration:1200+Math.random()*500,easing:'cubic-bezier(.12,.65,.25,1)',direction:reverse?'reverse':'normal'});
+        effects.push(particleAnimation.finished);particleAnimation.finished.catch(()=>{}).finally(()=>particle.remove());
+      }
+      return Promise.allSettled(effects);
+    }
+    async function mergeMatchingClocks(revision) {
+      if(revision!==fusionRevision || !settings.mergeTimezones)return;
+      if(clockReorder || pendingRemoval || timeEdit || activeDrag || !settingsPanel.hidden || picker.open) {
+        fusionTimer=setTimeout(()=>mergeMatchingClocks(revision),300);return;
+      }
+      const date=new Date();
+      const cards=[...container.children];
+      let source,target;
+      // Start with the rightmost matching clock, keeping the leftmost as its home.
+      for(let i=cards.length-1;i>0 && !source;i--) {
+        const city=cities.find(city=>city.el===cards[i]);
+        target=cards.slice(0,i).find(card=>clockOffset(cities.find(city=>city.el===card),date)===clockOffset(city,date));
+        if(target)source=cards[i];
+      }
+      if(!source)return;
+      if(animationsEnabled()) {
+        const from=source.getBoundingClientRect(),to=target.getBoundingClientRect();
+        const ghost=clockGhost(source);document.body.append(ghost);source.style.visibility='hidden';
+        animateFusion(target.querySelector('.dial'),[{transform:'scale(1)',filter:'brightness(1)'},{offset:.6,transform:'scale(1)',filter:'brightness(1)'},{offset:.85,transform:'scale(1.035)',filter:'brightness(1.7) blur(.6px)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:1450,easing:'ease-in-out'});
+        const flight=animateFusion(ghost,[{transform:'translate(0,0) scale(1)',opacity:1,filter:'blur(0px)'},{offset:.72,opacity:.85,filter:'blur(.4px)'},{transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.width/from.width},${to.height/from.height})`,opacity:0,filter:'blur(5px)'}],{duration:1150,easing:'cubic-bezier(.65,0,.2,1)'});
+        await flight.finished.catch(()=>{});ghost.remove();
+        if(revision!==fusionRevision)return;
+      }
+      // Recheck after flight: editing or a resize must never leave stale visual copies.
+      const focused=source.contains(document.activeElement);
+      const positions=new Map([...container.children].filter(card=>card!==source).map(card=>[card,card.getBoundingClientRect()]));
+      for(const city of cities)if(city.el===source)city.el=target;
+      source.remove();refreshGroup(target);rememberFusion(target);update();
+      fitViewportLayout();
+      if(animationsEnabled()) {
+        for(const [card,before] of positions) {
+          const after=card.getBoundingClientRect(),zoom=after.width/card.offsetWidth;
+          const rest=getComputedStyle(card).transform;
+          animateFusion(card,[{transform:`translate(${(before.left-after.left)/zoom}px,${(before.top-after.top)/zoom}px) scale(${before.width/after.width}) ${rest==='none'?'':rest}`},{transform:rest}],{duration:600,easing:'cubic-bezier(.22,1,.36,1)'});
+        }
+        // The burst follows the clock as the grid settles into its new spacing.
+        fusionTimer=setTimeout(()=>{if(revision===fusionRevision)burstFusion(target);},620);
+      }
+      if(focused)target.focus({preventScroll:true});
+      await new Promise(resolve=>setTimeout(resolve,animationsEnabled()?720:0));
+      if(revision===fusionRevision)mergeMatchingClocks(revision);
+    }
     function render() {
+      finishClockReorder(false);
+      sortCities();
+      pendingRemoval=null;
+      container.style.gridTemplateRows='';
+      renderedClockLimit=clockLimit();
+      const revision=++fusionRevision;clearTimeout(fusionTimer);
+      for(const animation of fusionAnimations)animation.cancel();
+      document.querySelectorAll('.fusion-overlay,.fusion-particle,.fusion-halo').forEach(element=>element.remove());
+      zoneSignature=currentZoneSignature();
       if (timeEdit) finishTimeEdit(true);
       container.replaceChildren();
-      for (const city of cities) {
+      for (const city of cities) city.el=null;
+      const visibleCities=visibleClockCities();
+      for (const city of visibleCities) {
         const card = document.createElement('article'); card.className = 'clock-card';
         let ticks = '';
         for (let i=0;i<60;i++) ticks += `<line x1="120" y1="${i%5===0?12:13}" x2="120" y2="${i%5===0?22:17}" transform="rotate(${i*6} 120 120)" stroke="${i%5===0?'#929292':'#363636'}" stroke-width="${i%5===0?1.6:1}"/>`;
@@ -768,14 +1263,29 @@
         renderLines(card.querySelector('.country'),displayLanguages().map(lang=>countryName(city,lang)));
         if (city.id !== 'paris') {
           const remove = document.createElement('button'); remove.className='remove'; remove.textContent='×'; remove.setAttribute('aria-label',t('remove').replace('{city}',cityName(city)));
-          remove.onclick=()=>{cities=cities.filter(c=>c.id!==city.id);save();render();}; card.append(remove);
+          remove.onclick=()=>removeCityWithAnimation(city); card.append(remove);
         }
         bindTimeControls(card,city);
         bindTimeEditor(card,city);
+        bindClockReordering(card);
         city.el=card; container.append(card);
       }
+      // Restore completed fusions before painting, without replaying their entrance.
+      const date=new Date();
+      for(const [index,city] of visibleCities.entries()) {
+        if(!settings.mergeTimezones)break;
+        const partner=visibleCities.slice(0,index).find(other=>other.el && other.el!==city.el &&
+          fusedPairs.has(fusionPairKey(city,other)) && !pendingFusionPairs.has(fusionPairKey(city,other)) && clockOffset(city,date)===clockOffset(other,date));
+        if(!partner)continue;
+        const source=city.el,target=partner.el;
+        for(const member of cities)if(member.el===source)member.el=target;
+        source.remove();
+      }
+      for(const card of container.children)refreshGroup(card);
       renderSettingsPreview();
       update();
+      scheduleViewportLayout();
+      if(settings.mergeTimezones)fusionTimer=setTimeout(()=>mergeMatchingClocks(revision),animationsEnabled()?750:0);
     }
     function renderSettingsPreview() {
       settingsPreview.replaceChildren();previewCity=null;
@@ -784,7 +1294,7 @@
       const card=container.firstElementChild.cloneNode(true);
       card.classList.remove('dragging');card.classList.add('preview-clock');
       card.removeAttribute('tabindex');card.setAttribute('aria-label',t('localPreview'));
-      for(const element of card.querySelectorAll('.remove,.time-editor'))element.remove();
+      for(const element of card.querySelectorAll('.remove-actions,.remove,.time-editor'))element.remove();
       const time=card.querySelector('.digital');time.hidden=false;time.removeAttribute('role');time.removeAttribute('tabindex');
       const label=card.querySelector('.clock-label');label.replaceChildren();
       const home=document.createElement('span');home.className='home';home.textContent=t('local');label.append(home);
@@ -817,21 +1327,27 @@
       card.querySelector('.zone').textContent=offset==='UTC'?'UTC+0':offset;
     }
     function update() {
+      updateClockIcon();
+      if(zoneSignature && zoneSignature!==currentZoneSignature()){render();return;}
       const realNow = new Date();
       const exploring = previewTimestamp!==null;
       const now = exploring ? new Date(previewTimestamp) : realNow;
       const parisDay = calendarDay('Europe/Paris',now);
+      const painted=new Set();
       for (const city of cities) {
         const f=formatter(city.zone);
         const card=city.el;
-        paintClock(card,city.zone,now,cityName(city));
+        if(!card || painted.has(card))continue;
+        painted.add(card);
+        const members=cities.filter(item=>item.el===card);
+        paintClock(card,city.zone,now,members.map(item=>cityName(item)).join('/'));
         const day=calendarDay(city.zone,now);
         renderLines(card.querySelector('.date'),displayLanguages().map(lang=>localizedDate(city.zone,lang,now)+(day===parisDay?'':` · ${t(day>parisDay?'nextDate':'previousDate',lang)}`)));
         const offset=f.offset.formatToParts(now).find(p=>p.type==='timeZoneName').value.replace('GMT','UTC');
         card.querySelector('.zone').textContent=offset==='UTC'?'UTC+0':offset;
         card.querySelector('.date').setAttribute('aria-hidden',String(exploring));
         card.querySelector('.zone').setAttribute('aria-hidden',String(exploring));
-        const dayDelta=exploring && city.id!==previewAnchorCityId ? calendarDay(city.zone,now)-calendarDay(city.zone,realNow) : 0;
+        const dayDelta=exploring && !members.some(item=>item.id===previewAnchorCityId) ? calendarDay(city.zone,now)-calendarDay(city.zone,realNow) : 0;
         const dayLabel=dayMessage(dayDelta);
         const dayChange=card.querySelector('.day-change');
         if (dayChange.textContent!==dayLabel) dayChange.textContent=dayLabel;
@@ -846,12 +1362,20 @@
       for (const city of matches) {
         const button=document.createElement('button'); button.className='city-option';
         button.append(document.createTextNode(cityName(city))); const label=document.createElement('span'); label.textContent=city.zone; button.append(label);
-        button.onclick=()=>{cities.push({...city});save();render();picker.close();container.lastElementChild.scrollIntoView({block:'nearest',inline:'nearest'});}; options.append(button);
+        button.onclick=()=>{
+          if(cities.length>=clockLimit())return;
+          // Adding a city is a new entrance, even when this pair fused in the past.
+          if(settings.mergeTimezones && animationsEnabled()) {
+            const date=new Date();
+            for(const existing of cities)if(clockOffset(existing,date)===clockOffset(city,date))pendingFusionPairs.add(fusionPairKey(existing,city));
+          }
+          cities.push({...city});save();render();picker.close();
+        }; options.append(button);
       }
       if (!matches.length) { const p=document.createElement('p'); p.className='empty';p.textContent=t('noResults');options.append(p); }
     }
-    document.getElementById('add').onclick=()=>{search.value='';showOptions();picker.showModal();search.focus();};
-    document.addEventListener('keydown',event=>{if(event.key==='Escape' && !picker.open){if(timeEdit)finishTimeEdit(true);else if(!settingsPanel.hidden)setSettingsOpen(false);else resetPreview();}});
+    document.getElementById('add').onclick=()=>{if(cities.length>=clockLimit())return;search.value='';showOptions();picker.showModal();search.focus();};
+    document.addEventListener('keydown',event=>{if(event.key==='Escape' && !picker.open && !developerConfirm.open){if(timeEdit)finishTimeEdit(true);else if(!settingsPanel.hidden)setSettingsOpen(false);else resetPreview();}});
     let backgroundGesture = null;
     document.addEventListener('pointerdown',event=>{
       backgroundGesture={pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
@@ -871,6 +1395,138 @@
     document.getElementById('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{document.getElementById('fullscreen').title=t('fullscreenUnavailable');}};
     document.addEventListener('fullscreenchange',()=>{const label=t(document.fullscreenElement?'exitFullscreen':'fullscreen');document.getElementById('fullscreen').setAttribute('aria-label',label);document.getElementById('fullscreen').title=label;});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+    let viewportLayoutFrame;
+    let renderedClockLimit;
+    let fittedClockLayout=null;
+    const viewportAnimations=new Map();
+    function isPhoneLayout() {
+      return matchMedia('(max-width:700px), (max-width:1000px) and (max-height:500px)').matches;
+    }
+    function clockLimit() { return isPhoneLayout()?6:8; }
+    function visibleClockCities() { return cities.filter(city=>settings.enabled.localTime || city.zone!==localZone).slice(0,clockLimit()); }
+    function scheduleViewportLayout() {
+      cancelAnimationFrame(viewportLayoutFrame);
+      viewportLayoutFrame=requestAnimationFrame(fitViewportLayout);
+    }
+    function arrangeClockRows(columns) {
+      const cards=[...container.children];
+      const rows=Math.ceil(cards.length/columns);
+      // Half-card tracks let both odd and even rows share the same center axis.
+      container.style.gridTemplateColumns=`repeat(${columns*2},minmax(0,1fr))`;
+      let index=0;
+      for(let row=0;row<rows;row++) {
+        const count=Math.min(columns,cards.length-index);
+        for(let column=0;column<count;column++) {
+          const card=cards[index++];
+          card.style.gridRow=String(row+1);
+          card.style.gridColumn=`${columns-count+1+column*2} / span 2`;
+        }
+      }
+    }
+    function fitViewportLayout() {
+      if(renderedClockLimit!==clockLimit()) {
+        if(cities.length>Math.min(renderedClockLimit,clockLimit())){render();return;}
+        renderedClockLimit=clockLimit();
+      }
+      if(pendingRemoval || clockReorder?.moved)return;
+      const addButton=document.getElementById('add');
+      addButton.disabled=cities.length>=clockLimit();
+      const limitMessages={zh:`最多显示 ${clockLimit()} 个时钟`,en:`Maximum ${clockLimit()} clocks`,fr:`${clockLimit()} horloges maximum`};
+      addButton.title=addButton.disabled?(limitMessages[settings.language] || limitMessages.en):t('add');
+      addButton.setAttribute('aria-label',addButton.title);
+      if(addButton.disabled && picker.open)picker.close();
+      const region=document.querySelector('.clock-scroll');
+      const availableWidth=Math.max(1,region.clientWidth-16);
+      const availableHeight=Math.max(1,region.clientHeight-16);
+      const gap=parseFloat(getComputedStyle(container).columnGap);
+      const cards=[...container.children];
+      const previous=fittedClockLayout;
+      const sameCards=previous && previous.cards.length===cards.length && previous.cards.every((card,index)=>card===cards[index]);
+      const previousRects=new Map(cards.map(card=>[card,card.getBoundingClientRect()]));
+      const candidates=[];
+      const minimumCardWidth=cards.length?Math.max(112,parseFloat(getComputedStyle(cards[0].querySelector('.digital')).fontSize)*4.5):112;
+      container.style.zoom=1;
+      const count=container.childElementCount;
+      if(!count) {
+        container.style.width='0px';container.style.gridTemplateColumns='none';container.dataset.columns='0';fittedClockLayout=null;
+      }
+      // Prefer a single row until the clocks become small; wrap only when height allows it.
+      for(let columns=count;columns>=1;columns--) {
+        const rows=Math.ceil(count/columns);
+        const width=availableWidth/1.04;
+        container.style.width=width+'px';
+        arrangeClockRows(columns);
+        container.style.setProperty('--dial-size','0px');
+        const cardWidth=Math.max(1,(width-(columns-1)*gap)/columns);
+        if(columns>1 && cardWidth<minimumCardWidth)continue;
+        // Keep labels readable by shrinking the dial before scaling the whole card.
+        const dialSize=Math.max(48,Math.min(320,cardWidth,(availableHeight/1.04-container.offsetHeight)/rows));
+        container.style.setProperty('--dial-size',dialSize+'px');
+        const scale=Math.min(1,availableWidth/(width*1.04),availableHeight/Math.max(1,container.offsetHeight*1.04));
+        const readable=(settings.enabled.analog?Math.min(dialSize,cardWidth):cardWidth)*scale;
+        const score=readable+70*scale;
+        candidates.push({columns,width,scale,score,dialSize,readable});
+      }
+      let best=candidates.find(candidate=>candidate.readable>=220) || candidates.reduce((best,candidate)=>!best || candidate.score>best.score?candidate:best,null);
+      // Different wrap and unwrap thresholds prevent flickering at a breakpoint.
+      const current=sameCards && candidates.find(candidate=>candidate.columns===previous.columns);
+      if(current && best && ((best.columns<current.columns && current.readable>=200) || (best.columns>current.columns && best.readable<240 && current.readable>=best.readable*.85)))best=current;
+      if(best) {
+        container.style.width=best.width+'px';
+        arrangeClockRows(best.columns);
+        container.style.setProperty('--dial-size',best.dialSize+'px');
+        container.style.zoom=best.scale;
+        container.dataset.columns=String(best.columns);
+        const resized=sameCards && (previous.width!==innerWidth || previous.height!==innerHeight);
+        if(resized && previous.columns!==best.columns && animationsEnabled() && settingsPanel.hidden && !activeDrag && !document.querySelector('.fusion-overlay')) {
+          for(const animation of viewportAnimations.values())animation.cancel();
+          viewportAnimations.clear();
+          region.classList.add('is-reflowing');
+          for(const card of cards) {
+            const before=previousRects.get(card),after=card.getBoundingClientRect(),zoom=after.width/card.offsetWidth;
+            const rest=getComputedStyle(card).transform;
+            const animation=animateFusion(card,[{transform:`translate(${(before.left-after.left)/zoom}px,${(before.top-after.top)/zoom}px) scale(${before.width/after.width}) ${rest==='none'?'':rest}`},{transform:rest}],{duration:600,easing:'cubic-bezier(.22,1,.36,1)'});
+            viewportAnimations.set(card,animation);
+            animation.finished.catch(()=>{}).finally(()=>{
+              if(viewportAnimations.get(card)===animation)viewportAnimations.delete(card);
+              if(!viewportAnimations.size)region.classList.remove('is-reflowing');
+            });
+          }
+        }
+        fittedClockLayout={cards,columns:best.columns,width:innerWidth,height:innerHeight};
+      }
+      if(!settingsPanel.hidden) {
+        const body=settingsPanel.querySelector('.settings-body');
+        const heading=settingsPanel.querySelector('.settings-heading');
+        const style=getComputedStyle(settingsPanel);
+        const width=settingsPanel.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+        const height=settingsPanel.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-heading.offsetHeight-parseFloat(getComputedStyle(heading).marginBottom)-settingsPanel.querySelector('.settings-footer').offsetHeight;
+        body.style.zoom=1;
+        body.style.width=Math.max(480,Math.min(1240,width))+'px';
+        body.style.zoom=Math.min(1,width/body.offsetWidth,height/Math.max(1,body.offsetHeight));
+      }
+      positionCaptureStatus();
+    }
+    const viewportLayoutObserver=new ResizeObserver(scheduleViewportLayout);
+    viewportLayoutObserver.observe(document.querySelector('main'));
+    viewportLayoutObserver.observe(container);
+    viewportLayoutObserver.observe(settingsPanel);
+    viewportLayoutObserver.observe(settingsPanel.querySelector('.settings-body'));
+    window.addEventListener('resize',scheduleViewportLayout,{passive:true});
+    window.visualViewport?.addEventListener('resize',scheduleViewportLayout,{passive:true});
+    document.fonts.ready.then(scheduleViewportLayout);
+    // The tab icon follows real local time, independently of city and time previews.
+    const clockFavicon=document.getElementById('clock-favicon');
+    let faviconHour=-1;
+    function updateClockIcon() {
+      const hour=new Date().getHours()%12 || 12;
+      if(hour===faviconHour)return;
+      clockFavicon.setAttribute('href',`assets/icons/clock-${String(hour).padStart(2,'0')}.svg`);
+      faviconHour=hour;
+    }
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateClockIcon();});
+    window.addEventListener('focus',updateClockIcon);
+    window.addEventListener('pageshow',updateClockIcon);
     applySettings(); setInterval(update,250);
   </script>
 </body>

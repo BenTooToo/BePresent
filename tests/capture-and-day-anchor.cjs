@@ -10,6 +10,8 @@ async function main() {
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.clock.setFixedTime(new Date('2026-10-15T21:50:00Z'));
     await page.goto('http://127.0.0.1:4173/');
+    // Test each city's preview and capture independently of automatic grouping.
+    await page.evaluate(()=>{mergeMatchingClocks=()=>{};});
     const cards=page.locator('.clock-card');
     const labels=()=>page.locator('.day-change').allTextContents();
     const reset=()=>page.locator('main').click({position:{x:5,y:5}});
@@ -92,8 +94,8 @@ async function main() {
     await page.setViewportSize({width:390,height:844});
     await page.locator('.clock-scroll').evaluate(el=>el.scrollLeft=el.scrollWidth);
     const scrollBefore=await page.locator('.clock-scroll').evaluate(el=>el.scrollLeft);
-    const mobile=await copyAndRead('copied-mobile-complete',800);
-    assert(mobile.width>390);
+    const mobile=await copyAndRead('copied-mobile-complete',390);
+    assert.equal(mobile.width,390);
     assert.equal(await page.locator('.clock-scroll').evaluate(el=>el.scrollLeft),scrollBefore);
     // Permission failures never report a successful copy, and the button can be retried.
     await page.evaluate(()=>{navigator.clipboard.write=()=>Promise.reject(new DOMException('Denied','NotAllowedError'));});
@@ -102,7 +104,7 @@ async function main() {
     assert.equal(await page.locator('#capture-status').textContent(),'复制失败，请允许剪贴板访问后重试');
     assert.equal(await page.locator('.capture-host').count(),0);
     assert.deepEqual(errors,[]);
-    console.log('PASS: active city stays on its local today, midnight wrapping, switching anchors, yesterday/tomorrow only; real PNG clipboard write/read; complete desktop and horizontally scrolled mobile captures; cleanup and permission-error feedback.');
+    console.log('PASS: active city stays on its local today, midnight wrapping, switching anchors, yesterday/tomorrow only; real PNG clipboard write/read; complete desktop and mobile grid captures; cleanup and permission-error feedback.');
   } finally {await browser.close();}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
