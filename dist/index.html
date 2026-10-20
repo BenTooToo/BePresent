@@ -417,7 +417,9 @@
       dubai:{zh:'迪拜',en:'Dubai',fr:'Dubaï',region:'AE'}
     };
     const enabledKeys=['localTime','localTimeText','analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','title','support'];
-    const settings={version:2,language:'zh',multilingual:false,secondLanguage:'en',thirdLanguage:'',deduplicateTranslations:true,animations:true,mergeTimezones:true,developerMode:false,rightDragReorder:false,autoSort:false,sortBy:'timezone',sortDirection:'asc',enabled:Object.fromEntries(enabledKeys.map(key=>[key,!['country','date'].includes(key)])),numeralCount:12,numeralPosition:'outside'};
+    const browserLanguage=(navigator.language || navigator.languages?.[0] || '').toLowerCase().split(/[-_]/)[0];
+    const defaultLanguage=Object.hasOwn(languageOptions,browserLanguage)?browserLanguage:'en';
+    const settings={version:2,language:defaultLanguage,multilingual:false,secondLanguage:'en',thirdLanguage:'',deduplicateTranslations:true,animations:true,mergeTimezones:true,developerMode:false,rightDragReorder:false,autoSort:false,sortBy:'timezone',sortDirection:'asc',enabled:Object.fromEntries(enabledKeys.map(key=>[key,!['country','date'].includes(key)])),numeralCount:12,numeralPosition:'outside'};
     try {
       const saved=JSON.parse(localStorage.getItem('be-present-settings'));
       if (saved && typeof saved==='object') {
@@ -438,7 +440,7 @@
     } catch {}
     const localizedDates=new Map();
     const regionNames=new Map(Object.keys(locales).map(lang=>[lang,new Intl.DisplayNames([locales[lang]],{type:'region'})]));
-    function t(key, language=settings.language) { return messages[language]?.[key] ?? messages.zh[key] ?? key; }
+    function t(key, language=settings.language) { return messages[language]?.[key] ?? messages.en[key] ?? key; }
     function cityName(city,language=settings.language) { return cityNames[city.id]?.[language] ?? city.name; }
     function countryName(city,language) { const region=cityNames[city.id]?.region; return region ? regionNames.get(language).of(region) : city.country; }
     function displayLanguages() { return [...new Set([settings.language,...(settings.multilingual?[settings.secondLanguage,settings.thirdLanguage]:[])].filter(Boolean))]; }
