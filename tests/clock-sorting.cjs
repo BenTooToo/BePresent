@@ -18,7 +18,7 @@ const {chromium}=require('playwright');
       assert.equal(await page.locator('#auto-sort').isChecked(),false);
       assert.equal(await page.locator('#sorting-options').isVisible(),false);
       await page.locator('#merge-timezones').uncheck();
-      await page.locator('#primary-language').selectOption('en');
+      await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'en'}"]`).click();
       await page.evaluate(()=>{
         const ids=['paris','waterloo','new-york','beijing','london','tokyo','sydney','dubai'];
         cities=ids.map(id=>({...catalog.find(city=>city.id===id)}));render();

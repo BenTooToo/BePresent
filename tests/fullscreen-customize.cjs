@@ -32,7 +32,7 @@ async function main() {
     await page.locator('[data-enabled="country"]').uncheck();
     assert.equal(await preview.locator('.country').isVisible(),false);
     await page.locator('[data-enabled="country"]').check();
-    await page.locator('#primary-language').selectOption('en');
+    await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'en'}"]`).click();
     assert.equal(await preview.locator('.country').textContent(),'Japan');
     await page.locator('#multilingual').check();
     assert.deepEqual(await preview.locator('.city .translation-line').allTextContents(),['Tokyo','东京']);
@@ -61,7 +61,8 @@ async function main() {
     // Success feedback is compact, green, borderless, and centered between clocks and add button.
     await page.setViewportSize({width:1440,height:1000});
     await page.locator('#capture').click();
-    await page.waitForFunction(()=>!document.getElementById('capture').disabled);
+    await page.locator('#capture-copy').click();
+    await page.waitForFunction(()=>!document.getElementById('capture-preview').open);
     const toast=page.locator('#capture-status');
     await page.waitForTimeout(400);
     const appearance=await toast.evaluate(el=>{const s=getComputedStyle(el);return {color:s.color,fontSize:parseFloat(s.fontSize),border:s.borderTopWidth,background:s.backgroundColor,opacity:s.opacity,state:el.dataset.state};});

@@ -13,8 +13,8 @@ const {chromium} = require('playwright');
     await page.locator('#animations').uncheck();
     await page.locator('#merge-timezones').uncheck();
     await page.locator('#multilingual').check();
-    await page.locator('#primary-language').selectOption('en');
-    await page.locator('#secondary-language').selectOption('fr');
+    await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'en'}"]`).click();
+    await page.locator('[data-language-select="secondary-language"]').click();await page.locator(`.language-choice[data-language="${'fr'}"]`).click();
     const paris=page.locator('#clocks > article').filter({has:page.locator('.city',{hasText:'Paris'})});
     assert.deepEqual(await paris.locator('.city .translation-line').allTextContents(),['Paris']);
     assert.deepEqual(await paris.locator('.country .translation-line').allTextContents(),['France']);
@@ -25,7 +25,7 @@ const {chromium} = require('playwright');
     await page.locator('#deduplicate-translations').uncheck();
     assert.deepEqual(await paris.locator('.country .translation-line').allTextContents(),['France','France']);
     await page.locator('#deduplicate-translations').check();
-    await page.locator('#third-language').selectOption('zh');
+    await page.locator('[data-language-select="third-language"]').click();await page.locator(`.language-choice[data-language="${'zh'}"]`).click();
     assert.deepEqual(await paris.locator('.country .translation-line').allTextContents(),['France','法国']);
     assert.deepEqual(await page.locator('#settings-preview .country .translation-line').allTextContents(),await page.evaluate(()=>{
       const names=displayLanguages().map(lang=>countryName(previewCity,lang));return [...new Set(names)];
@@ -62,7 +62,7 @@ const {chromium} = require('playwright');
     await page.locator('#settings-toggle').click();
     for(const id of ['animations','merge-timezones','deduplicate-translations'])assert.equal(await page.locator('#'+id).isChecked(),false,'saved choice persists');
     for(const language of ['zh','en','fr']) {
-      await page.locator('#primary-language').selectOption(language);
+      await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${language}"]`).click();
       for(const [width,height] of [[390,844],[320,568]]) {
         await page.setViewportSize({width,height});await page.waitForTimeout(120);
         await page.locator('#translation-info-button').hover();

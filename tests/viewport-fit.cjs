@@ -50,7 +50,8 @@ async function assertFits(page, selector) {
     assert.equal(await page.locator('#clocks .clock-card').count(),6);
     await page.screenshot({path:'tests/viewport-mobile.png'});
     await page.locator('#capture').click();
-    await page.waitForFunction(()=>!document.getElementById('capture').disabled);
+    await page.locator('#capture-copy').click();
+    await page.waitForFunction(()=>!document.getElementById('capture-preview').open);
     assert.equal(await page.locator('#capture-status').getAttribute('data-state'),'success');
     assert.deepEqual(await page.evaluate(async()=>{
       const item=(await navigator.clipboard.read()).find(item=>item.types.includes('image/png'));

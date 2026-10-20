@@ -73,13 +73,13 @@ async function main() {
     assert.equal(await page.locator('#numeral-position').inputValue(),'inside');
     await page.locator('#numeral-position').selectOption('outside',{force:true});
     assert.equal(await page.locator('[data-enabled="support"]').isChecked(),false);
-    await page.locator('#primary-language').selectOption('en');
+    await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'en'}"]`).click();
     assert.equal(await page.locator('#settings-title').textContent(),'Customize');
     assert.equal(await page.locator('#settings-panel').innerText().then(text=>/Hide |Enable /.test(text)),false);
-    await page.locator('#primary-language').selectOption('fr');
+    await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'fr'}"]`).click();
     assert.equal(await page.locator('#settings-title').textContent(),'Personnaliser');
     assert.equal(await page.locator('#settings-panel').innerText().then(text=>/Masquer|Activer/.test(text)),false);
-    await page.locator('#primary-language').selectOption('zh');
+    await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'zh'}"]`).click();
     await page.waitForTimeout(150);
     await page.screenshot({path:'tests/customize-desktop.png'});
     await page.setViewportSize({width:390,height:844});

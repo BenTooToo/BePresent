@@ -36,13 +36,13 @@ async function main() {
       await page.locator(`[data-enabled="${key}"]`).check();
       assert.equal(await page.locator('#settings-preview '+selector).first().isVisible(), true, key);
     }
-    await page.locator('#primary-language').selectOption('en');
+    await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${'en'}"]`).click();
     assert.equal(await page.locator('#settings-title').textContent(), 'Customize');
     assert.equal(await page.locator('.city').first().textContent(), 'Paris');
     assert.equal(await page.locator('.country').first().textContent(), 'France');
     await page.locator('#multilingual').check();
-    await page.locator('#secondary-language').selectOption('zh');
-    await page.locator('#third-language').selectOption('fr');
+    await page.locator('[data-language-select="secondary-language"]').click();await page.locator(`.language-choice[data-language="${'zh'}"]`).click();
+    await page.locator('[data-language-select="third-language"]').click();await page.locator(`.language-choice[data-language="${'fr'}"]`).click();
     assert.deepEqual(await page.locator('.city').first().locator('.translation-line').allTextContents(), ['Paris','巴黎','Paris']);
     assert.equal(await page.locator('.date').first().locator('.translation-line').count(), 3);
     await assertDockClear();
@@ -173,7 +173,7 @@ async function main() {
     await open();
     await assertDockClear();
     await page.locator('#multilingual').check();
-    await page.locator('#third-language').selectOption('fr');
+    await page.locator('[data-language-select="third-language"]').click();await page.locator(`.language-choice[data-language="${'fr'}"]`).click();
     await assertDockClear();
     await page.screenshot({ path: 'tests/settings-mobile.png' });
     await close();

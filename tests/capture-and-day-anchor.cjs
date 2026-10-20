@@ -55,7 +55,8 @@ async function main() {
     });
     async function copyAndRead(name,minWidth) {
       await page.locator('#capture').click();
-      await page.waitForFunction(()=>!document.getElementById('capture').disabled,{timeout:20000});
+    await page.locator('#capture-copy').click();
+      await page.waitForFunction(()=>!document.getElementById('capture-preview').open,{timeout:20000});
       assert.equal(await page.locator('#capture-status').textContent(),'截图已复制到剪贴板');
       const image=await page.evaluate(async()=>{
         const items=await navigator.clipboard.read();
@@ -100,7 +101,8 @@ async function main() {
     // Permission failures never report a successful copy, and the button can be retried.
     await page.evaluate(()=>{navigator.clipboard.write=()=>Promise.reject(new DOMException('Denied','NotAllowedError'));});
     await page.locator('#capture').click();
-    await page.waitForFunction(()=>!document.getElementById('capture').disabled);
+    await page.locator('#capture-copy').click();
+    await page.waitForFunction(()=>!document.getElementById('capture-preview').open);
     assert.equal(await page.locator('#capture-status').textContent(),'复制失败，请允许剪贴板访问后重试');
     assert.equal(await page.locator('.capture-host').count(),0);
     assert.deepEqual(errors,[]);

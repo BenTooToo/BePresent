@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Be Present">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icons/app-180.png">
   <title>Be Present · 本初时间</title>
   <link id="clock-favicon" rel="icon" type="image/svg+xml" sizes="any" href="assets/icons/clock-12.svg">
   <style>
@@ -24,8 +29,10 @@
     .button:hover { color:#fff; border-color:#777; }
     .icon-button { width:37px; height:37px; padding:9px; }
     .icon-button svg { width:17px; height:17px; }
+    #install-help ol { padding-left:22px; margin:0; color:#aaa; font-size:14px; line-height:1.8; }
+    #install-help li+li { margin-top:10px; }
     #capture[aria-busy=true] { opacity:.5; cursor:wait; }
-    .hide-camera #capture { display:none; }
+    .hide-camera #capture, .hide-install #install-app { display:none; }
     .capture-status { position:fixed; top:var(--capture-status-top,75svh); left:50%; z-index:100; width:max-content; max-width:calc(100vw - 44px); margin:0; padding:0; border:0; background:transparent; color:#78ce9a; font-size:clamp(12px,1vw,14px); line-height:1.6; font-weight:400; text-align:center; letter-spacing:.04em; opacity:0; transform:translate(-50%,calc(-50% + 12px)); transition:opacity .3s ease,transform .3s ease; pointer-events:none; }
     .capture-status.is-visible { opacity:1; transform:translate(-50%,-50%); }
     .capture-status[data-state=error] { color:#ed8080; }
@@ -82,7 +89,7 @@
     .settings-panel { position:fixed; inset:0; width:100%; height:100svh; padding:40px 4.8vw 60px; overflow:auto; overscroll-behavior:contain; background:#000; border:0; z-index:50; }
     .settings-heading { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; min-height:34px; max-width:1240px; margin:0 auto 44px; background:#000; box-shadow:0 -32px 0 20px #000; }
     .settings-heading h2 { margin:0; font-size:24px; font-weight:400; letter-spacing:.08em; }
-    .settings-footer { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; margin-top:auto; padding-top:12px; }
+    .settings-footer { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; flex-shrink:0; margin-top:auto; padding-top:12px; }
     .settings-version { color:#666; font-size:11px; font-variant-numeric:tabular-nums; }
     .developer-mode-toggle { display:flex; align-items:center; gap:10px; padding:8px 0 4px 12px; color:#777; font-size:11px; cursor:pointer; }
     .developer-mode-toggle:hover { color:#bbb; }
@@ -101,7 +108,7 @@
     #developer-confirm form { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
     .customize-layout { display:grid; grid-template-columns:minmax(0,700px) minmax(220px,320px); gap:clamp(40px,7vw,110px); max-width:1240px; margin:0 auto; align-items:start; }
     .customize-content { min-width:0; }
-    .developer-note { max-width:1240px; margin:48px auto 0; color:#777; font-size:12px; line-height:1.9; }
+    .developer-note { grid-column:1 / -1; margin:0 0 12px; text-align:left; color:#777; font-size:12px; line-height:1.9; }
     .developer-note a { color:#bbb; text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px; }
     .developer-note a:hover { color:#fff; }
     .settings-preview { position:sticky; top:76px; min-width:0; }
@@ -129,18 +136,7 @@
     .clock-options { margin:0 0 8px 5px; padding-left:12px; border-left:1px solid #292929; }
     .clock-options .setting-row, .clock-options .language-field { font-size:12px; color:#929292; min-height:36px; }
     .clock-options select { min-width:80px; }
-    .segmented { --count:2; --index:0; position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(var(--count),minmax(0,1fr)); flex-shrink:0; min-width:140px; padding:3px; border:1px solid #303030; border-radius:7px; background:#101010; touch-action:pan-y; user-select:none; }
-    .segmented::before { content:''; position:absolute; z-index:-1; top:3px; bottom:3px; left:3px; width:calc((100% - 6px)/var(--count)); border-radius:4px; background:#303030; box-shadow:0 1px 3px #0005; transform:translateX(calc(var(--index)*100%)); transition:transform .2s ease; }
-    .segmented label { position:relative; display:grid; place-items:center; min-width:0; min-height:30px; padding:5px 9px; margin:0; color:#777; font-size:11px; line-height:1.5; text-align:center; cursor:pointer; overflow:hidden; }
-    .segmented label { grid-template-columns:minmax(0,1fr); }
-    .segmented label > span { display:block; width:max-content; white-space:nowrap; transform:scale(var(--text-scale,1)); transform-origin:center; }
-    .segmented label:has(input:checked) { color:#eee; }
-    .segmented label:has(input:focus-visible) { outline:1px solid #aaa; border-radius:4px; outline-offset:0; }
-    .segmented input[type=radio] { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
-    .segmented.dragging::before,.disable-animations .segmented::before { transition:none; }
-    #capture-options .segmented { width:100%; min-width:0; margin:4px 0 10px; }
     #capture-options .language-field { display:block; }
-    @media(max-width:700px) { .numeral-options .language-field:has(.segmented) { align-items:flex-start; flex-direction:column; padding:6px 0; gap:5px; } .numeral-options .segmented { width:100%; min-width:0; } .segmented label { padding:5px 7px; } }
     .numeral-options { margin:0 0 4px 5px; padding-left:10px; border-left:1px solid #252525; }
     .numeral-options .language-field { gap:8px; }
     .clock-options .numeral-options select { min-width:70px; max-width:65%; }
@@ -229,7 +225,6 @@
     .settings-heading { position:relative; top:auto; width:100%; flex-shrink:0; margin-bottom:18px; box-shadow:none; }
     .settings-body { min-height:0; align-self:center; flex-shrink:0; }
     .settings-preview { position:static; }
-    .developer-note { margin-top:20px; }
     .settings-language { gap:12px 24px; padding-bottom:16px; margin-bottom:16px; }
     .settings-columns { grid-template-columns:1fr 1fr; gap:24px; }
     .settings-columns legend { margin-bottom:8px; }
@@ -257,6 +252,8 @@
       .settings-panel select { min-width:65px; }
       .settings-heading h2 { font-size:20px; }
     }
+    .page { padding-top:max(36px,env(safe-area-inset-top)); padding-bottom:max(25px,env(safe-area-inset-bottom)); }
+    @media (max-width:700px) { .page { padding-top:max(25px,env(safe-area-inset-top)); padding-bottom:max(20px,env(safe-area-inset-bottom)); } }
     @media (max-height:450px) {
       .page { padding-top:max(8px,env(safe-area-inset-top)); padding-bottom:max(8px,env(safe-area-inset-bottom)); }
       .brand-name { font-size:24px; }
@@ -266,13 +263,40 @@
       .add-city { width:38px; height:38px; }
       .settings-toggle, .support-button { bottom:max(9px,env(safe-area-inset-bottom)); }
     }
+    .language-icon { width:36px; height:32px; padding:6px 8px; display:grid; place-items:center; flex-shrink:0; }
+    .language-icon svg { width:20px; height:20px; }
+    #language-picker { width:calc(100vw - 32px); max-width:none; height:calc(100dvh - 32px); max-height:none; padding:clamp(20px,4vw,56px); }
+    #language-picker::backdrop { background:#000b; }
+    #language-picker .dialog-head { margin-bottom:clamp(28px,7vh,64px); }
+    #language-picker h2 { font-size:24px; }
+    .language-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; max-width:960px; margin:0 auto; }
+    .language-choice { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:100px; padding:24px; font-size:20px; text-align:left; }
+    .language-choice[aria-pressed=true] { color:#eee; border-color:#aaa; background:#181818; }
+    .language-choice[aria-pressed=true]::after { content:'✓'; }
+    @media(max-width:700px) { .language-choices { grid-template-columns:1fr; gap:12px; } .language-choice { min-height:72px; padding:18px 20px; font-size:18px; } }
+    #capture-preview { position:fixed; inset:auto; margin:0; padding:16px; max-width:none; max-height:none; overflow:hidden; box-sizing:border-box; border-radius:7px; background:#111; }
+    #capture-preview::backdrop { background:transparent; backdrop-filter:none; }
+    #capture-preview .dialog-head { justify-content:flex-start; gap:12px; margin-bottom:12px; }
+    #capture-preview h2 { font-size:14px; }
+    #capture-preview-close { width:24px; height:24px; display:grid; place-items:center; padding:2px; }
+    #capture-preview-close svg { width:20px; height:20px; }
+    #capture-image { width:100%; height:156px; max-height:none; object-fit:contain; border:1px solid #222; border-radius:3px; }
+    #capture-save-status { min-height:18px; margin:8px 0 0; font-size:11px; line-height:1.5; }
+    #capture-preview .capture-actions { gap:8px; margin-top:10px; }
+    #capture-preview .capture-actions .button { min-height:36px; padding:7px 8px; font-size:11px; }
+    #capture-preview .button:disabled { opacity:.4; cursor:wait; }
+    .capture-morph-icon { position:absolute; top:9px; left:9px; width:17px; height:17px; opacity:0; pointer-events:none; }
+    .capture-preview-content { opacity:0; }
+    #capture-preview[data-state=ready] .capture-preview-content { opacity:1; }
+    #capture-preview[data-state=ready] { overflow:auto; }
+    @media(max-height:400px) { #capture-image { height:80px; } }
   </style>
 </head>
 <body>
   <div class="page">
     <header>
       <div class="brand"><h1 class="brand-name">Be Present</h1><span class="brand-chinese">本初时间</span></div>
-      <div class="actions"><button class="button icon-button" id="capture" aria-label="复制完整截图" title="复制完整截图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h4l1.5-2h5L16 6h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></button><button class="button icon-button" id="fullscreen" aria-label="进入全屏" title="全屏"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
+      <div class="actions"><button class="button icon-button" id="install-app" aria-label="安装到桌面" title="安装到桌面"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg></button><button class="button icon-button" id="capture" aria-label="复制完整截图" title="复制完整截图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h4l1.5-2h5L16 6h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg></button><button class="button icon-button" id="fullscreen" aria-label="进入全屏" title="全屏"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
     </header>
     <main>
       <div class="clock-scroll" role="region" aria-label="世界时钟"><div class="clocks" id="clocks"></div></div>
@@ -284,10 +308,10 @@
       <div class="settings-heading"><h2 id="settings-title" data-i18n="settings">自定义</h2><button class="close" id="settings-close" aria-label="关闭自定义">×</button></div>
       <div class="settings-body"><div class="customize-layout"><div class="customize-content">
       <div class="settings-language">
-        <label class="language-field"><span data-i18n="language">语言</span><select id="primary-language" aria-label="语言"></select></label>
+        <div class="language-field"><span data-i18n="language">语言</span><button type="button" class="button language-icon" data-language-select="primary-language" aria-label="语言" aria-haspopup="dialog" aria-controls="language-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><select id="primary-language" aria-label="语言" hidden></select></div>
         <label class="setting-row"><span data-i18n="multilingual">多语言显示</span><input type="checkbox" role="switch" id="multilingual"></label>
-        <label class="language-field" id="secondary-field" hidden><span data-i18n="secondLanguage">第二语言</span><select id="secondary-language" aria-label="第二语言"></select></label>
-        <label class="language-field" id="third-field" hidden><span data-i18n="thirdLanguage">第三语言</span><select id="third-language" aria-label="第三语言"></select></label>
+        <div class="language-field" id="secondary-field" hidden><span data-i18n="secondLanguage">第二语言</span><button type="button" class="button language-icon" data-language-select="secondary-language" aria-label="第二语言" aria-haspopup="dialog" aria-controls="language-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><select id="secondary-language" aria-label="第二语言" hidden></select></div>
+        <div class="language-field" id="third-field" hidden><span data-i18n="thirdLanguage">第三语言</span><button type="button" class="button language-icon" data-language-select="third-language" aria-label="第三语言" aria-haspopup="dialog" aria-controls="language-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg></button><select id="third-language" aria-label="第三语言" hidden></select></div>
         <div class="setting-row translation-filter" id="translation-filter" hidden><span class="translation-filter-label"><label for="deduplicate-translations" id="deduplicate-label" data-i18n="deduplicateTranslations">删除重叠翻译（推荐）</label><span class="setting-info"><button type="button" id="translation-info-button" aria-describedby="translation-info" aria-label="删除重叠翻译说明">i</button><span class="setting-tooltip" id="translation-info" role="tooltip" data-i18n="deduplicateInfo">同一内容在多种语言中写法相同时，只保留首次出现的一项。例如英语和法语的 France 只显示一次；不同的译名仍会保留。</span></span></span><input type="checkbox" role="switch" id="deduplicate-translations" aria-labelledby="deduplicate-label"></div>
       </div>
       <div class="behavior-settings">
@@ -317,6 +341,7 @@
           <label class="setting-row"><span><span data-i18n="customizeButton">自定义按钮</span><small data-i18n="bottomHint" data-hint="settings" hidden>（鼠标移到底部时显示）</small></span><input type="checkbox" role="switch" data-enabled="settings"></label>
           <label class="setting-row"><span><span data-i18n="addButton">加号按钮</span><small data-i18n="bottomHint" data-hint="add" hidden>（鼠标移到底部时显示）</small></span><input type="checkbox" role="switch" data-enabled="add"></label>
           <label class="setting-row"><span><span data-i18n="fullscreenButton">全屏按钮</span><small data-i18n="topHint" data-hint="fullscreen" hidden>（鼠标移到顶部时显示）</small></span><input type="checkbox" role="switch" data-enabled="fullscreen"></label>
+          <label class="setting-row"><span data-i18n="installButton">下载按钮</span><input type="checkbox" role="switch" data-enabled="install"></label>
           <label class="setting-row"><span data-i18n="cameraButton">相机按钮</span><input type="checkbox" role="switch" data-enabled="camera"></label>
           <div class="clock-options" id="capture-options"><div class="language-field"><span data-i18n="captureAction">拍摄后</span><select id="capture-action" aria-label="拍摄后"><option value="clipboard" data-i18n="captureClipboardShort">剪切板</option><option value="download" data-i18n="captureSaveShort">保存</option><option value="ask" data-i18n="captureAsk">每次询问</option></select></div></div>
           <label class="setting-row"><span data-i18n="title">标题</span><input type="checkbox" role="switch" data-enabled="title"></label>
@@ -332,20 +357,28 @@
           <label class="language-field"><span data-i18n="sortDirection">顺序</span><select id="sort-direction" aria-label="顺序"><option value="asc" data-i18n="sortAscending">升序（croissant）</option><option value="desc" data-i18n="sortDescending">降序（décroissant）</option></select></label>
         </div>
       </div>
-      <p class="developer-note"><span data-i18n="developerBefore">如果你喜欢这个时钟，不妨点击</span><a href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" data-i18n="developerLink">这里</a><span data-i18n="developerAfter">来看一下开发者是谁吧</span></p>
       </div>
-      <div class="settings-footer"><span class="settings-version">v0.2.1</span><label class="developer-mode-toggle"><span data-i18n="developerOptions">开发者选项</span><input type="checkbox" role="switch" id="developer-options" aria-label="开发者选项" aria-controls="experimental-features"></label></div>
+      <div class="settings-footer">
+      <p class="developer-note"><span data-i18n="developerBefore">如果你喜欢这个时钟，不妨点击</span><a href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" data-i18n="developerLink">这里</a><span data-i18n="developerAfter">来看一下开发者是谁吧</span></p>
+      <span class="settings-version">v0.3.0</span><label class="developer-mode-toggle"><span data-i18n="developerOptions">开发者选项</span><input type="checkbox" role="switch" id="developer-options" aria-label="开发者选项" aria-controls="experimental-features"></label></div>
       <dialog id="developer-confirm" aria-labelledby="developer-confirm-title" aria-describedby="developer-confirm-message"><h3 id="developer-confirm-title" data-i18n="enableDeveloper">开启开发者选项</h3><p id="developer-confirm-message" data-i18n="developerWarning">开启后会多出很多奇奇怪怪的选项，很可能会有 bug 或者设计不好的地方，请谨慎开启。</p><form method="dialog"><button class="button" value="cancel" autofocus data-i18n="cancelDeveloper">取消</button><button class="button" value="enable" data-i18n="confirmDeveloper">仍然开启</button></form></dialog>
     </section>
   </div>
   <div class="capture-status" id="capture-status" role="status" hidden></div>
-  <dialog id="capture-choice" aria-labelledby="capture-choice-title"><div class="dialog-head"><h2 id="capture-choice-title" data-i18n="captureChoose">如何保存截图？</h2><button class="close" id="capture-choice-close" aria-label="关闭">×</button></div><div class="capture-actions"><button class="button" id="capture-choice-copy" data-i18n="captureClipboard">复制到剪贴板</button><button class="button" id="capture-choice-save" data-i18n="captureSave">保存图片</button></div></dialog>
-  <dialog id="capture-preview" aria-labelledby="capture-preview-title">
-    <div class="dialog-head"><h2 id="capture-preview-title" data-i18n="captureSave">保存图片</h2><button class="close" id="capture-preview-close" aria-label="关闭">×</button></div>
-    <img id="capture-image" alt="">
-    <div class="capture-actions"><button class="button" id="capture-share" data-i18n="captureSave">保存图片</button><a class="button" id="capture-download" data-i18n="captureDownload">下载 PNG</a></div>
-    <p id="capture-save-status" role="status" data-i18n="captureSaveHint">在系统菜单中选择存储图像，或下载 PNG。</p>
+  <dialog id="install-help" aria-labelledby="install-help-title">
+    <div class="dialog-head"><h2 id="install-help-title" data-i18n="installApp">安装到桌面</h2><button class="close" id="install-help-close" aria-label="关闭">×</button></div>
+    <ol id="install-steps"></ol>
   </dialog>
+  <dialog id="capture-preview" aria-labelledby="capture-preview-title" tabindex="-1">
+    <svg class="capture-morph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 6h4l1.5-2h5L16 6h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg>
+    <div class="capture-preview-content">
+      <div class="dialog-head"><button type="button" class="close" id="capture-preview-close" aria-label="取消"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 5-7 7 7 7M3 12h18"/></svg></button><h2 id="capture-preview-title" data-i18n="capturePreview">截图预览</h2></div>
+      <img id="capture-image" alt="" hidden>
+      <p id="capture-save-status" role="status"></p>
+      <div class="capture-actions"><button type="button" class="button" id="capture-copy" data-i18n="captureClipboard" disabled>复制到剪贴板</button><button type="button" class="button" id="capture-download" data-i18n="captureSave" disabled>保存图片</button></div>
+    </div>
+  </dialog>
+  <dialog id="language-picker" aria-labelledby="language-picker-title"><div class="dialog-head"><h2 id="language-picker-title">语言</h2><button type="button" class="close" id="language-picker-close" aria-label="关闭">×</button></div><div class="language-choices" id="language-choices"></div></dialog>
   <dialog id="picker"><div class="dialog-head"><h2>添加一个城市</h2><button class="close" id="close-picker" aria-label="关闭">×</button></div><input id="search" placeholder="搜索城市或时区，例如：伦敦、Tokyo" aria-label="搜索城市或时区"><div class="city-options" id="options"></div></dialog>
   <script src="assets/vendor/html-to-image-1.11.13.js"></script>
   <script>
@@ -400,6 +433,9 @@
       fr:{settings:'Personnaliser',closeSettings:'Fermer la personnalisation',language:'Langue',multilingual:'Affichage multilingue',secondLanguage:'Deuxième langue',thirdLanguage:'Troisième langue',none:'Aucune',clockContent:'Heure',pageControls:'Commandes de la page',analog:'Horloge',city:'Ville',country:'Pays',digital:'Heure numérique',date:'Date',zone:'Fuseau horaire',customizeButton:'Bouton de personnalisation',addButton:'Bouton +',fullscreenButton:'Bouton plein écran',title:'Titre',bottomHint:'(Visible en déplaçant la souris vers le bas)',topHint:'(Visible en déplaçant la souris vers le haut)',local:'Heure locale',add:'Ajouter une ville',addTitle:'Ajouter une ville',close:'Fermer',search:'Rechercher une ville ou un fuseau, ex. Paris, Tokyo',noResults:'Aucune ville trouvée. Essayez un autre nom ou fuseau.',fullscreen:'Activer le plein écran',exitFullscreen:'Quitter le plein écran',fullscreenUnavailable:'Le plein écran est indisponible',nextDay:'Demain',previousDay:'Hier',daysAfter:'{n} jours après',daysBefore:'{n} jours avant',nextDate:'lendemain',previousDate:'veille',remove:'Supprimer {city}',clockInstructions:'Horloge de {city}. Glisser ou faire défiler verticalement pour régler l’heure. Les flèches suivent les repères de cinq minutes.',clockRegion:'Horloges du monde'}
     };
     Object.assign(messages.zh,{hours:'小时',minutes:'分钟',seconds:'秒钟',editTime:'编辑 {city} 时间'});
+    Object.assign(messages.zh,{installApp:'安装到桌面',installIOS1:'在 Safari 中打开此页面，点击“分享”。',installIOS2:'选择“添加到主屏幕”，再点击“添加”。如有“作为网页 App 打开”选项，请保持开启。',installAndroid1:'打开浏览器菜单（⋮）。',installAndroid2:'选择“安装应用”或“添加到主屏幕”，按提示确认。如果没有该选项，请使用 Chrome 或 Edge 打开此页面。',installMac1:'在 Safari 中打开此页面，选择“文件”→“添加到程序坞”。',installMac2:'点击“添加”。如果没有该选项，请使用 Chrome 或 Edge 打开此页面安装。',installDesktop1:'在 Chrome 或 Edge 中打开此页面。',installDesktop2:'点击地址栏中的安装图标，或在浏览器菜单中选择“安装应用”/“将此站点安装为应用”，按提示确认。'});
+    Object.assign(messages.en,{installApp:'Install app',installIOS1:'Open this page in Safari and tap Share.',installIOS2:'Choose Add to Home Screen, then Add. Keep Open as Web App enabled if offered.',installAndroid1:'Open the browser menu (⋮).',installAndroid2:'Choose Install app or Add to Home screen and confirm. If unavailable, open this page in Chrome or Edge.',installMac1:'Open this page in Safari and choose File → Add to Dock.',installMac2:'Click Add. If unavailable, open this page in Chrome or Edge to install.',installDesktop1:'Open this page in Chrome or Edge.',installDesktop2:'Click the install icon in the address bar, or choose Install app / Install this site as an app in the browser menu, then confirm.'});
+    Object.assign(messages.fr,{installApp:'Installer l’application',installIOS1:'Ouvrez cette page dans Safari et touchez Partager.',installIOS2:'Choisissez Sur l’écran d’accueil, puis Ajouter. Gardez Ouvrir comme app web activé si proposé.',installAndroid1:'Ouvrez le menu du navigateur (⋮).',installAndroid2:'Choisissez Installer l’application ou Ajouter à l’écran d’accueil, puis confirmez. Si l’option est absente, ouvrez cette page dans Chrome ou Edge.',installMac1:'Ouvrez cette page dans Safari et choisissez Fichier → Ajouter au Dock.',installMac2:'Cliquez sur Ajouter. Si l’option est absente, ouvrez cette page dans Chrome ou Edge pour l’installer.',installDesktop1:'Ouvrez cette page dans Chrome ou Edge.',installDesktop2:'Cliquez sur l’icône d’installation dans la barre d’adresse, ou choisissez Installer l’application / Installer ce site en tant qu’application dans le menu du navigateur, puis confirmez.'});
     Object.assign(messages.en,{hours:'Hours',minutes:'Minutes',seconds:'Seconds',editTime:'Edit time in {city}'});
     Object.assign(messages.fr,{hours:'Heures',minutes:'Minutes',seconds:'Secondes',editTime:'Modifier l’heure de {city}'});
     Object.assign(messages.zh,{secondHand:'秒针',numerals:'表盘数字',numeralCount:'数量',fourNumerals:'4 个',twelveNumerals:'12 个',supportButton:'赞助按钮'});
@@ -411,9 +447,9 @@
     Object.assign(messages.zh,{cameraButton:'相机按钮',capture:'复制完整截图',captureCopied:'截图已复制到剪贴板',captureUnsupported:'当前浏览器不支持图片复制',captureFailed:'复制失败，请允许剪贴板访问后重试'});
     Object.assign(messages.en,{cameraButton:'Camera button',capture:'Copy full screenshot',captureCopied:'Screenshot copied to clipboard',captureUnsupported:'This browser does not support copying images',captureFailed:'Copy failed. Allow clipboard access and try again.'});
     Object.assign(messages.fr,{cameraButton:'Bouton photo',capture:'Copier la capture complète',captureCopied:'Capture copiée dans le presse-papiers',captureUnsupported:'Ce navigateur ne permet pas de copier des images',captureFailed:'Copie impossible. Autorisez le presse-papiers puis réessayez.'});
-    Object.assign(messages.zh,{captureMobile:'拍摄并保存图片',captureSave:'保存图片',captureDownload:'下载 PNG',captureSaveHint:'在系统菜单中选择存储图像，或下载 PNG。',captureDownloadHint:'图片可长按保存，或下载 PNG 到手机。',captureSaveFailed:'无法打开系统菜单，请长按图片保存或下载 PNG。',captureGenerateFailed:'图片生成失败，请重试。'});
-    Object.assign(messages.en,{captureMobile:'Capture and save image',captureSave:'Save image',captureDownload:'Download PNG',captureSaveHint:'Choose Save Image in the system menu, or download the PNG.',captureDownloadHint:'Touch and hold the image to save it, or download the PNG.',captureSaveFailed:'Could not open the system menu. Touch and hold the image to save it, or download the PNG.',captureGenerateFailed:'Could not create the image. Please try again.'});
-    Object.assign(messages.fr,{captureMobile:'Capturer et enregistrer',captureSave:'Enregistrer l’image',captureDownload:'Télécharger le PNG',captureSaveHint:'Choisissez Enregistrer l’image dans le menu système, ou téléchargez le PNG.',captureDownloadHint:'Appuyez longuement sur l’image pour l’enregistrer, ou téléchargez le PNG.',captureSaveFailed:'Impossible d’ouvrir le menu système. Appuyez longuement sur l’image ou téléchargez le PNG.',captureGenerateFailed:'Impossible de créer l’image. Réessayez.'});
+    Object.assign(messages.zh,{captureMobile:'拍摄并保存图片',captureSave:'保存图片',captureDownload:'下载 PNG',captureSaveHint:'在系统菜单中选择存储图像，或下载 PNG。',captureDownloadHint:'图片可长按保存，或下载 PNG 到手机。',captureSaveFailed:'图片保存失败，请重试。',captureGenerateFailed:'图片生成失败，请重试。'});
+    Object.assign(messages.en,{captureMobile:'Capture and save image',captureSave:'Save image',captureDownload:'Download PNG',captureSaveHint:'Choose Save Image in the system menu, or download the PNG.',captureDownloadHint:'Touch and hold the image to save it, or download the PNG.',captureSaveFailed:'Could not save the image. Please try again.',captureGenerateFailed:'Could not create the image. Please try again.'});
+    Object.assign(messages.fr,{captureMobile:'Capturer et enregistrer',captureSave:'Enregistrer l’image',captureDownload:'Télécharger le PNG',captureSaveHint:'Choisissez Enregistrer l’image dans le menu système, ou téléchargez le PNG.',captureDownloadHint:'Appuyez longuement sur l’image pour l’enregistrer, ou téléchargez le PNG.',captureSaveFailed:'Impossible d’enregistrer l’image. Réessayez.',captureGenerateFailed:'Impossible de créer l’image. Réessayez.'});
     Object.assign(messages.zh,{captureDownloaded:'图片下载已开始'});
     Object.assign(messages.en,{captureDownloaded:'Image download started'});
     Object.assign(messages.fr,{captureDownloaded:'Téléchargement de l’image lancé'});
@@ -444,6 +480,12 @@
     Object.assign(messages.zh,{autoSort:'自动排序',sortClocks:'排序时钟',sortBy:'依据',sortTimezone:'时区',sortCity:'城市首字母',sortDirection:'顺序',sortAscending:'升序（croissant）',sortDescending:'降序（décroissant）'});
     Object.assign(messages.en,{autoSort:'Automatic sorting',sortClocks:'Sort clocks',sortBy:'Sort by',sortTimezone:'Time zone',sortCity:'City name (A–Z)',sortDirection:'Order',sortAscending:'Ascending',sortDescending:'Descending'});
     Object.assign(messages.fr,{autoSort:'Tri automatique',sortClocks:'Trier les horloges',sortBy:'Critère',sortTimezone:'Fuseau horaire',sortCity:'Nom de ville (A–Z)',sortDirection:'Ordre',sortAscending:'Croissant',sortDescending:'Décroissant'});
+    Object.assign(messages.zh,{installButton:'下载按钮'});
+    Object.assign(messages.en,{installButton:'Download button'});
+    Object.assign(messages.fr,{installButton:'Bouton de téléchargement'});
+    Object.assign(messages.zh,{capturePreview:'截图预览',capturePreparing:'正在生成截图…',captureAction:'默认操作',captureAsk:'不预选'});
+    Object.assign(messages.en,{capturePreview:'Screenshot preview',capturePreparing:'Creating screenshot…',captureAction:'Default action',captureAsk:'No preference'});
+    Object.assign(messages.fr,{capturePreview:'Aperçu de la capture',capturePreparing:'Création de la capture…',captureAction:'Action par défaut',captureAsk:'Aucune préférence'});
     const cityNames={
       paris:{zh:'巴黎',en:'Paris',fr:'Paris',region:'FR'},
       waterloo:{zh:'滑铁卢',en:'Waterloo',fr:'Waterloo',region:'CA'},
@@ -458,7 +500,7 @@
       'hong-kong':{zh:'香港',en:'Hong Kong',fr:'Hong Kong',region:'CN'},
       dubai:{zh:'迪拜',en:'Dubai',fr:'Dubaï',region:'AE'}
     };
-    const enabledKeys=['localTime','localTimeText','analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','title','support'];
+    const enabledKeys=['localTime','localTimeText','analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','install','title','support'];
     const browserLanguage=(navigator.language || navigator.languages?.[0] || '').toLowerCase().split(/[-_]/)[0];
     const defaultLanguage=Object.hasOwn(languageOptions,browserLanguage)?browserLanguage:'en';
     const settings={version:2,language:defaultLanguage,multilingual:false,secondLanguage:'en',thirdLanguage:'',deduplicateTranslations:true,animations:true,mergeTimezones:true,developerMode:false,rightDragReorder:false,autoSort:false,sortBy:'timezone',sortDirection:'asc',captureAction:'clipboard',enabled:Object.fromEntries(enabledKeys.map(key=>[key,!['country','date'].includes(key)])),numeralCount:12,numeralPosition:'outside'};
@@ -564,15 +606,21 @@
       document.getElementById('capture-options').hidden=isMobileCapture() || !settings.enabled.camera;
       document.getElementById('capture-action').value=settings.captureAction;
       document.getElementById('capture-action').setAttribute('aria-label',t('captureAction'));
-      syncSegments();
       for (const hint of document.querySelectorAll('[data-hint]')) hint.hidden=settings.enabled[hint.dataset.hint];
       settingsToggle.setAttribute('aria-label',t(settingsPanel.hidden?'settings':'closeSettings'));
       document.getElementById('settings-close').setAttribute('aria-label',t('closeSettings'));
       document.getElementById('add').setAttribute('aria-label',t('add'));
-      document.getElementById('capture').setAttribute('aria-label',t(isMobileCapture()?'captureMobile':settings.captureAction==='download'?'captureSave':settings.captureAction==='ask'?'cameraButton':'capture'));
+      document.getElementById('capture').setAttribute('aria-label',t('cameraButton'));
       document.getElementById('capture').title=document.getElementById('capture').getAttribute('aria-label');
       document.getElementById('capture-preview-close').setAttribute('aria-label',t('close'));
-      document.getElementById('capture-choice-close').setAttribute('aria-label',t('close'));
+
+      for(const button of document.querySelectorAll('[data-language-select]')) {
+        const select=document.getElementById(button.dataset.languageSelect);
+        const label=select.getAttribute('aria-label')+': '+select.selectedOptions[0].textContent;
+        button.setAttribute('aria-label',label);button.title=label;
+      }
+      document.getElementById('language-picker-close').setAttribute('aria-label',t('close'));
+      updateInstallUI();
       const fullscreen=document.getElementById('fullscreen');
       fullscreen.setAttribute('aria-label',t(document.fullscreenElement?'exitFullscreen':'fullscreen'));fullscreen.title=fullscreen.getAttribute('aria-label');
       picker.querySelector('h2').textContent=t('addTitle');
@@ -580,6 +628,23 @@
       search.placeholder=t('search');search.setAttribute('aria-label',t('search'));
       document.querySelector('.clock-scroll').setAttribute('aria-label',t('clockRegion'));
     }
+    const languagePicker=document.getElementById('language-picker');
+    for(const button of document.querySelectorAll('[data-language-select]'))button.onclick=()=>{
+      const select=document.getElementById(button.dataset.languageSelect);
+      document.getElementById('language-picker-title').textContent=select.getAttribute('aria-label');
+      const choices=document.getElementById('language-choices');choices.replaceChildren();
+      for(const option of select.options) {
+        const choice=document.createElement('button');choice.type='button';choice.className='button language-choice';
+        choice.textContent=option.textContent;choice.dataset.language=option.value;
+        if(option.value)choice.lang=locales[option.value];
+        choice.setAttribute('aria-pressed',String(option.selected));
+        choice.onclick=()=>{select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));languagePicker.close();};
+        choices.append(choice);
+      }
+      languagePicker.showModal();
+      choices.querySelector('[aria-pressed="true"]')?.focus();
+    };
+    document.getElementById('language-picker-close').onclick=()=>languagePicker.close();
     const developerConfirm=document.getElementById('developer-confirm');
     document.getElementById('developer-options').onchange=event=>{
       if(!event.target.checked) {settings.developerMode=false;applySettings();return;}
@@ -590,7 +655,33 @@
       if(developerConfirm.returnValue==='enable') {settings.developerMode=true;applySettings();}
       document.getElementById('developer-options').focus({preventScroll:true});
     });
+    let settingsActionPositions=null;
+    const actionAnimations=new Map();
+    function measureHeaderActions() {
+      return new Map([...document.querySelectorAll('.actions > button')].filter(button=>button.getClientRects().length).map(button=>[button,button.getBoundingClientRect().left]));
+    }
+    function animateHeaderActions(previous) {
+      for(const animation of actionAnimations.values())animation.cancel();
+      actionAnimations.clear();
+      if(!previous || !settings.animations || matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      for(const [button,left] of measureHeaderActions()) {
+        const existed=previous.has(button);
+        const offset=existed?previous.get(button)-left:-49;
+        if(Math.abs(offset)<.5)continue;
+        const animation=button.animate([
+          {transform:'translateX('+offset+'px)',opacity:existed?1:0},
+          {transform:'translateX(0)',opacity:1}
+        ],{duration:420,easing:'cubic-bezier(.22,.61,.36,1)'});
+        actionAnimations.set(button,animation);
+        animation.onfinish=()=>{if(actionAnimations.get(button)===animation)actionAnimations.delete(button);};
+      }
+    }
     function setSettingsOpen(open) {
+      if(open && settingsPanel.hidden) {
+        for(const animation of actionAnimations.values())animation.cancel();
+        actionAnimations.clear();
+        settingsActionPositions=measureHeaderActions();
+      }
       if(open)finishClockReorder(false);
       if(open && timeEdit)finishTimeEdit();
       if(open && activeDrag){const drag=activeDrag;activeDrag=null;drag.card.classList.remove('dragging');if(drag.card.hasPointerCapture(drag.pointerId))drag.card.releasePointerCapture(drag.pointerId);}
@@ -603,6 +694,7 @@
       settingsToggle.setAttribute('aria-label',t(open?'closeSettings':'settings'));
       renderSettingsPreview();updateSettingsPreview(new Date());
       (open?settingsPanel:settingsToggle).focus({preventScroll:true});
+      if(!open){animateHeaderActions(settingsActionPositions);settingsActionPositions=null;}
     }
     settingsPanel.addEventListener('keydown',event=>{
       if(developerConfirm.open)return;
@@ -613,6 +705,7 @@
       else if(!event.shiftKey && (document.activeElement===last || document.activeElement===settingsPanel)){event.preventDefault();first.focus();}
     });
     function applySettings() {
+      const previousActions=settingsPanel.hidden?measureHeaderActions():null;
       if(settings.autoSort)settings.rightDragReorder=false;
       normalizeLanguages();
       for (const key of enabledKeys) page.classList.toggle(`hide-${key}`,!settings.enabled[key]);
@@ -620,6 +713,7 @@
       page.classList.toggle('developer-mode',settings.developerMode);
       page.style.setProperty('--language-count',displayLanguages().length);
       updateLanguageUI();render();
+      if(previousActions)animateHeaderActions(previousActions);
       try { localStorage.setItem('be-present-settings',JSON.stringify(settings)); } catch {}
     }
     settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
@@ -648,63 +742,6 @@
     for (const input of document.querySelectorAll('[data-enabled]')) input.onchange=()=>{settings.enabled[input.dataset.enabled]=input.checked;applySettings();};
     document.getElementById('numeral-count').onchange=event=>{settings.numeralCount=Number(event.target.value);applySettings();};
     document.getElementById('numeral-position').onchange=event=>{settings.numeralPosition=event.target.value;applySettings();};
-    function fitSegmentText(group) {
-      if(!group.clientWidth)return;
-      for(const label of group.querySelectorAll('label')) {
-        const text=label.querySelector('span'),style=getComputedStyle(label);
-        const available=Math.max(0,label.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight));
-        text.style.setProperty('--text-scale',Math.min(1,available/Math.max(1,text.offsetWidth)));
-      }
-    }
-    function syncSegments() {
-      for(const group of document.querySelectorAll('.segmented')) {
-        const select=document.getElementById(group.dataset.select);
-        const index=[...select.options].findIndex(option=>option.value===select.value);
-        group.style.setProperty('--index',Math.max(0,index));
-        group.setAttribute('aria-label',select.getAttribute('aria-label'));
-        for(const [i,input] of [...group.querySelectorAll('input')].entries()) {
-          input.checked=i===index;
-          input.nextElementSibling.textContent=select.options[i].textContent;
-        }
-        fitSegmentText(group);
-      }
-    }
-    const segmentResizeObserver=new ResizeObserver(entries=>{for(const entry of entries)fitSegmentText(entry.target);});
-    for(const id of ['numeral-count','numeral-position','sort-by','sort-direction','capture-action']) {
-      const select=document.getElementById(id);
-      if(select.parentElement.tagName==='LABEL') {
-        const original=select.parentElement,field=document.createElement('div');field.className=original.className;field.id=original.id;
-        original.replaceWith(field);field.append(...original.childNodes);
-      }
-      const group=document.createElement('div');group.className='segmented';group.dataset.select=id;group.setAttribute('role','radiogroup');group.style.setProperty('--count',select.options.length);
-      // Keep the select as the settings value source; radios provide the visible controls.
-      select.hidden=true;select.setAttribute('aria-hidden','true');select.tabIndex=-1;select.after(group);
-      for(const option of select.options) {
-        const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');
-        input.type='radio';input.name=`segment-${id}`;input.value=option.value;input.checked=option.selected;text.textContent=option.textContent;
-        input.onchange=()=>{if(input.checked){select.value=input.value;select.dispatchEvent(new Event('change',{bubbles:true}));}};
-        label.append(input,text);group.append(label);
-      }
-      segmentResizeObserver.observe(group);
-      let drag=null;
-      group.addEventListener('pointerdown',event=>{if(event.button===0)drag={id:event.pointerId,x:event.clientX,index:select.selectedIndex,moved:false};});
-      group.addEventListener('pointermove',event=>{
-        if(!drag || drag.id!==event.pointerId)return;
-        if(!drag.moved && Math.abs(event.clientX-drag.x)<6)return;
-        drag.moved=true;group.classList.add('dragging');group.setPointerCapture(event.pointerId);
-        const rect=group.getBoundingClientRect();
-        drag.index=Math.max(0,Math.min(select.options.length-1,Math.floor((event.clientX-rect.left)/rect.width*select.options.length)));
-        group.style.setProperty('--index',drag.index);
-      });
-      group.addEventListener('pointerup',event=>{
-        if(!drag || drag.id!==event.pointerId)return;
-        const previous=drag;drag=null;group.classList.remove('dragging');
-        if(group.hasPointerCapture(event.pointerId))group.releasePointerCapture(event.pointerId);
-        if(previous.moved) {select.selectedIndex=previous.index;select.dispatchEvent(new Event('change',{bubbles:true}));}
-      });
-      for(const type of ['pointercancel','lostpointercapture'])group.addEventListener(type,()=>{drag=null;group.classList.remove('dragging');syncSegments();});
-    }
-    document.fonts.ready.then(()=>{for(const group of document.querySelectorAll('.segmented'))fitSegmentText(group);});
     async function rasterizeSnapshotSVG(snapshot) {
       const properties=['fill','fill-opacity','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','font-family','font-size','font-weight','text-anchor','dominant-baseline','opacity','display','visibility'];
       for (const svg of snapshot.querySelectorAll('svg')) {
@@ -789,93 +826,114 @@
       return navigator.userAgentData?.mobile===true || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
     }
     const capturePreview=document.getElementById('capture-preview');
-    const captureShare=document.getElementById('capture-share');
     const captureDownload=document.getElementById('capture-download');
+    const captureCopy=document.getElementById('capture-copy');
     const captureSaveStatus=document.getElementById('capture-save-status');
-    let captureFile;
-    let captureImageURL;
-    function canShareCapture() {
-      try {return !!(captureFile && navigator.share && navigator.canShare?.({files:[captureFile]}));} catch {return false;}
+    const captureImage=document.getElementById('capture-image');
+    const captureContent=capturePreview.querySelector('.capture-preview-content');
+    const captureMorphIcon=capturePreview.querySelector('.capture-morph-icon');
+    let captureFile=null,captureImageURL=null,captureBlob=null,captureSession=0;
+    let captureMorphAnimation=null,captureOperation=false;
+    function captureMotionDuration() {
+      return settings.animations && !matchMedia('(prefers-reduced-motion: reduce)').matches?440:0;
     }
-    async function shareCapture() {
-      if(!canShareCapture() || captureShare.disabled)return;
-      captureShare.disabled=true;
-      try {
-        await navigator.share({files:[captureFile]});
-        captureSaveStatus.textContent=t('captureSaveHint');
-      } catch(error) {
-        if(error.name!=='AbortError')captureSaveStatus.textContent=t('captureSaveFailed');
-      } finally {captureShare.disabled=false;}
+    function captureFrame(rect) {
+      return {left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'};
     }
-    captureShare.onclick=shareCapture;
-    document.getElementById('capture-preview-close').onclick=()=>capturePreview.close();
+    async function morphCapture(from,to,opening) {
+      captureMorphAnimation?.cancel();
+      const duration=captureMotionDuration(),easing='cubic-bezier(.4,0,.2,1)';
+      Object.assign(capturePreview.style,captureFrame(to));
+      const animations=[
+        capturePreview.animate([captureFrame(from),captureFrame(to)],{duration,easing}),
+        captureContent.animate([{opacity:opening?0:1},{opacity:opening?0:0},{opacity:opening?1:0}],{duration,easing}),
+        captureMorphIcon.animate([{opacity:opening?1:0},{opacity:0},{opacity:opening?0:1}],{duration,easing})
+      ];
+      captureMorphAnimation=animations[0];
+      await Promise.all(animations.map(animation=>animation.finished.catch(()=>{})));
+    }
+    function showCaptureStatus(message,error=false) {
+      clearTimeout(captureStatusTimer);clearTimeout(captureHideTimer);
+      captureStatus.textContent=message;captureStatus.dataset.state=error?'error':'success';captureStatus.hidden=false;
+      positionCaptureStatus();void captureStatus.offsetWidth;captureStatus.classList.add('is-visible');
+      captureStatusTimer=setTimeout(()=>{captureStatus.classList.remove('is-visible');captureHideTimer=setTimeout(()=>{captureStatus.hidden=true;},350);},3000);
+    }
+    async function closeCapturePreview() {
+      if(!capturePreview.open || capturePreview.dataset.state==='closing')return;
+      const from=capturePreview.getBoundingClientRect();
+      capturePreview.dataset.state='closing';captureSession++;
+      await morphCapture(from,captureButton.getBoundingClientRect(),false);
+      capturePreview.close();
+    }
+    capturePreview.addEventListener('cancel',event=>{event.preventDefault();closeCapturePreview();});
+    document.getElementById('capture-preview-close').onclick=closeCapturePreview;
     capturePreview.addEventListener('close',()=>{
+      captureSession++;captureMorphAnimation?.cancel();captureMorphAnimation=null;
       if(captureImageURL)URL.revokeObjectURL(captureImageURL);
-      captureImageURL=null;captureFile=null;
-      document.getElementById('capture-image').removeAttribute('src');captureDownload.removeAttribute('href');
+      captureImageURL=null;captureFile=null;captureBlob=null;captureImage.removeAttribute('src');captureImage.hidden=true;
+      captureButton.style.visibility='';captureButton.disabled=false;captureButton.removeAttribute('aria-busy');
+      captureButton.setAttribute('aria-expanded','false');captureButton.focus({preventScroll:true});
+      capturePreview.removeAttribute('data-state');
     });
-    async function saveMobileCapture(blob) {
-      captureFile=new File([blob],`be-present-${new Date().toISOString().replace(/[:.]/g,'-')}.png`,{type:'image/png'});
-      captureImageURL=URL.createObjectURL(blob);
-      document.getElementById('capture-image').src=captureImageURL;
-      captureDownload.href=captureImageURL;captureDownload.download=captureFile.name;
-      captureShare.hidden=!canShareCapture();
-      captureSaveStatus.textContent=t(captureShare.hidden?'captureDownloadHint':'captureSaveHint');
-      capturePreview.showModal();
-      if(!captureShare.hidden && navigator.userActivation?.isActive!==false)await shareCapture();
-      else if(captureShare.hidden)captureDownload.click();
-    }
-    const captureChoice=document.getElementById('capture-choice');
-    document.getElementById('capture-choice-close').onclick=()=>captureChoice.close();
-    document.getElementById('capture-choice-copy').onclick=()=>{captureChoice.close();performCapture('clipboard');};
-    document.getElementById('capture-choice-save').onclick=()=>{captureChoice.close();performCapture('download');};
-    captureButton.onclick=()=>{
-      if(captureButton.disabled)return;
-      if(!isMobileCapture() && settings.captureAction==='ask'){captureChoice.showModal();return;}
-      performCapture(settings.captureAction);
-    };
-    async function performCapture(action) {
-      if(captureButton.disabled)return;
-      clearTimeout(captureStatusTimer);clearTimeout(captureHideTimer);captureStatus.classList.remove('is-visible');captureStatus.hidden=true;
-      captureButton.disabled=true;captureButton.setAttribute('aria-busy','true');
-      let imagePromise;
-      const mobile=isMobileCapture();
-      const downloading=action==='download';
+    captureButton.setAttribute('aria-haspopup','dialog');captureButton.setAttribute('aria-controls','capture-preview');captureButton.setAttribute('aria-expanded','false');
+    captureButton.onclick=async()=>{
+      if(capturePreview.open || captureButton.disabled)return;
+      const session=++captureSession,origin=captureButton.getBoundingClientRect();
+      clearTimeout(captureStatusTimer);captureStatus.hidden=true;captureStatus.classList.remove('is-visible');
+      captureBlob=null;captureFile=null;captureOperation=false;captureImage.hidden=true;
+      for(const control of [captureCopy,captureDownload])control.disabled=true;
+      captureCopy.hidden=isMobileCapture();
+      captureSaveStatus.textContent=t('capturePreparing');
+      const width=Math.min(320,innerWidth-32),height=Math.min(innerHeight<400?232:308,innerHeight-32);
+      const target={left:Math.max(16,Math.min(origin.right-width,innerWidth-width-16)),top:Math.max(16,Math.min(origin.bottom+16,innerHeight-height-16)),width,height};
+      Object.assign(capturePreview.style,captureFrame(origin));capturePreview.dataset.state='opening';
+      captureButton.style.visibility='hidden';captureButton.setAttribute('aria-expanded','true');
+      capturePreview.showModal();capturePreview.focus({preventScroll:true});
+      const opening=morphCapture(origin,target,true).then(()=>{if(session===captureSession && capturePreview.open)capturePreview.dataset.state='ready';});
       try {
-        if(mobile) {
-          imagePromise=createScreenshotBlob();
-          await saveMobileCapture(await imagePromise);
-          return;
+        const blob=await createScreenshotBlob();
+        if(session!==captureSession || !capturePreview.open)return;
+        captureBlob=blob;captureFile=new File([blob],'be-present-'+new Date().toISOString().replace(/[:.]/g,'-')+'.png',{type:'image/png'});
+        captureImageURL=URL.createObjectURL(blob);captureImage.src=captureImageURL;
+        await captureImage.decode();
+        if(session!==captureSession || !capturePreview.open)return;
+        captureImage.hidden=false;
+        captureSaveStatus.textContent='';
+        for(const control of [captureCopy,captureDownload])control.disabled=false;
+        await opening;
+        if(session===captureSession && document.activeElement===capturePreview) {
+          const preferred=isMobileCapture()?captureDownload:settings.captureAction==='download'?captureDownload:settings.captureAction==='clipboard'?captureCopy:document.getElementById('capture-preview-close');
+          preferred.focus({preventScroll:true});
         }
-        if(downloading) {
-          imagePromise=createScreenshotBlob();
-          const imageURL=URL.createObjectURL(await imagePromise);
-          const link=document.createElement('a');
-          link.href=imageURL;link.download=`be-present-${new Date().toISOString().replace(/[:.]/g,'-')}.png`;
-          document.body.append(link);link.click();link.remove();
-          setTimeout(()=>URL.revokeObjectURL(imageURL),60000);
-          captureStatus.textContent=t('captureDownloaded');captureStatus.dataset.state='success';
-          return;
-        }
-        if (!navigator.clipboard?.write || typeof ClipboardItem==='undefined') throw new Error('ClipboardUnsupported');
-        imagePromise=createScreenshotBlob();imagePromise.catch(()=>{});
-        await navigator.clipboard.write([new ClipboardItem({'image/png':imagePromise})]);
-        captureStatus.textContent=t('captureCopied');
-        captureStatus.dataset.state='success';
-      } catch (error) {
-        captureStatus.textContent=t(mobile || downloading?'captureGenerateFailed':error.message==='ClipboardUnsupported'?'captureUnsupported':'captureFailed');
-        captureStatus.dataset.state='error';
-      } finally {
-        if (imagePromise) await imagePromise.catch(()=>{});
-        captureButton.disabled=false;captureButton.removeAttribute('aria-busy');
-        if(mobile && capturePreview.open)return;
-        captureStatus.hidden=false;
-        positionCaptureStatus();
-        void captureStatus.offsetWidth;
-        captureStatus.classList.add('is-visible');
-        captureStatusTimer=setTimeout(()=>{captureStatus.classList.remove('is-visible');captureHideTimer=setTimeout(()=>{captureStatus.hidden=true;},350);},3000);
+      } catch(error) {
+        if(session!==captureSession)return;
+        await closeCapturePreview();showCaptureStatus(t('captureGenerateFailed'),true);
       }
     };
+    async function finishCaptureAction(action) {
+      if(!captureBlob || captureOperation || capturePreview.dataset.state==='closing')return;
+      captureOperation=true;
+      for(const control of [captureCopy,captureDownload])control.disabled=true;
+      let message='',failed=false;
+      try {
+        if(action==='clipboard') {
+          if(!navigator.clipboard?.write || typeof ClipboardItem==='undefined')throw new Error('ClipboardUnsupported');
+          await navigator.clipboard.write([new ClipboardItem({'image/png':captureBlob})]);message=t('captureCopied');
+
+        } else {
+          const link=document.createElement('a');link.href=captureImageURL;link.download=captureFile.name;
+          document.body.append(link);link.click();link.remove();message=t('captureDownloaded');
+        }
+      } catch(error) {
+        if(error.name!=='AbortError') {failed=true;message=t(action==='clipboard'?(error.message==='ClipboardUnsupported'?'captureUnsupported':'captureFailed'):'captureSaveFailed');}
+      } finally {
+        await closeCapturePreview();captureOperation=false;
+        if(message)showCaptureStatus(message,failed);
+      }
+    }
+    captureCopy.onclick=()=>finishCaptureAction('clipboard');
+    captureDownload.onclick=()=>finishCaptureAction('download');
+    window.addEventListener('resize',()=>{if(capturePreview.open)closeCapturePreview();},{passive:true});
     let touchRevealTimer;
     function revealEdgeControls(event) {
       const bottom=event.clientY>=window.innerHeight-112;
@@ -1584,7 +1642,7 @@
       if (!matches.length) { const p=document.createElement('p'); p.className='empty';p.textContent=t('noResults');options.append(p); }
     }
     document.getElementById('add').onclick=()=>{if(cities.length>=clockLimit())return;search.value='';showOptions();picker.showModal();search.focus();};
-    document.addEventListener('keydown',event=>{if(event.key==='Escape' && !picker.open && !developerConfirm.open){if(timeEdit)finishTimeEdit(true);else if(!settingsPanel.hidden)setSettingsOpen(false);else resetPreview();}});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape' && !picker.open && !languagePicker.open && !capturePreview.open && !developerConfirm.open && !document.getElementById('install-help').open){if(timeEdit)finishTimeEdit(true);else if(!settingsPanel.hidden)setSettingsOpen(false);else resetPreview();}});
     let backgroundGesture = null;
     document.addEventListener('pointerdown',event=>{
       backgroundGesture={pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
@@ -1736,6 +1794,52 @@
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateClockIcon();});
     window.addEventListener('focus',updateClockIcon);
     window.addEventListener('pageshow',updateClockIcon);
+    const installButton=document.getElementById('install-app');
+    const installHelp=document.getElementById('install-help');
+    const standaloneDisplay=matchMedia('(display-mode: standalone)');
+    let pendingInstallPrompt=null;
+    let installedInThisTab=false;
+    function updateInstallUI() {
+      installButton.hidden=installedInThisTab || standaloneDisplay.matches || navigator.standalone===true;
+      installButton.setAttribute('aria-label',t('installApp'));installButton.title=t('installApp');
+      document.getElementById('install-help-close').setAttribute('aria-label',t('close'));
+      const ua=navigator.userAgent;
+      const ios=/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1);
+      const macSafari=/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
+      const platform=ios?'IOS':/Android/.test(ua)?'Android':macSafari?'Mac':'Desktop';
+      document.getElementById('install-steps').replaceChildren(...[1,2].map(step=>{
+        const item=document.createElement('li');item.textContent=t(`install${platform}${step}`);return item;
+      }));
+    }
+    window.addEventListener('beforeinstallprompt',event=>{
+      event.preventDefault();pendingInstallPrompt=event;updateInstallUI();
+    });
+    window.addEventListener('appinstalled',()=>{
+      pendingInstallPrompt=null;installedInThisTab=true;updateInstallUI();
+      if(installHelp.open)installHelp.close();
+    });
+    standaloneDisplay.addEventListener('change',updateInstallUI);
+    installButton.onclick=async()=>{
+      if(installButton.disabled)return;
+      if(timeEdit)finishTimeEdit();
+      const prompt=pendingInstallPrompt;
+      if(!prompt){updateInstallUI();installHelp.showModal();return;}
+      pendingInstallPrompt=null;installButton.disabled=true;
+      try {
+        await prompt.prompt();
+        const result=await prompt.userChoice;
+        if(result.outcome==='accepted'){installedInThisTab=true;updateInstallUI();}
+      } catch {
+        updateInstallUI();installHelp.showModal();
+      } finally {installButton.disabled=false;}
+    };
+    document.getElementById('install-help-close').onclick=()=>installHelp.close();
+    installHelp.addEventListener('click',event=>{
+      if(event.target!==installHelp)return;
+      const rect=installHelp.getBoundingClientRect();
+      if(event.clientX<rect.left || event.clientX>rect.right || event.clientY<rect.top || event.clientY>rect.bottom)installHelp.close();
+    });
+    if('serviceWorker' in navigator && window.isSecureContext)navigator.serviceWorker.register('./sw.js').catch(()=>{});
     applySettings(); setInterval(update,250);
   </script>
 </body>

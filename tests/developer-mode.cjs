@@ -5,7 +5,7 @@ const {chromium}=require('playwright');
   const browser=await chromium.launch({channel:'msedge',headless:true});
   try {
     for(const viewport of [{width:1366,height:768},{width:390,height:844},{width:568,height:320}]) {
-      const page=await browser.newPage({viewport});
+      const page=await browser.newPage({viewport,locale:'zh-CN'});
       const errors=[];page.on('pageerror',error=>errors.push(error.message));
       await page.goto('http://127.0.0.1:4173/');
       await page.locator('#settings-toggle').click();
@@ -44,7 +44,7 @@ const {chromium}=require('playwright');
       await toggle.click();assert.equal(await dialog.isVisible(),false,'turning off needs no warning');
       assert.equal(await page.evaluate(()=>settings.developerMode),false);
       for(const language of ['en','fr']) {
-        await page.locator('#primary-language').selectOption(language);
+        await page.locator('[data-language-select="primary-language"]').click();await page.locator(`.language-choice[data-language="${language}"]`).click();
         await toggle.click();
         const rect=await dialog.boundingBox();
         assert(rect.x>=0 && rect.y>=0 && rect.x+rect.width<=viewport.width && rect.y+rect.height<=viewport.height);
