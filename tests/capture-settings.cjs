@@ -8,7 +8,7 @@ const {chromium,devices}=require('playwright');
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto('http://127.0.0.1:4173/');
     await page.locator('#settings-toggle').click();
-    assert.equal(await page.locator('.settings-version').textContent(),'v0.2.0');
+    assert.equal(await page.locator('.settings-version').textContent(),'v0.2.1');
     const group=page.locator('[data-select="capture-action"]');
     assert.deepEqual(await group.locator('label > span').allTextContents(),['剪切板','保存','每次询问']);
     assert.equal(await group.getByRole('radio').count(),3);
@@ -95,6 +95,6 @@ const {chromium,devices}=require('playwright');
       const rect=await mobile.locator(`[data-select="${id}"]`).boundingBox();assert(rect.x>=0 && rect.x+rect.width<=390);
     }
     await mobile.screenshot({path:'tests/capture-settings-mobile.png'});
-    console.log('PASS: v0.2.0, exclusive segmented controls, dragging, keyboard, persistence, capture prompt/cancel/copy/download, translations and mobile settings.');
+    console.log('PASS: v0.2.1, exclusive segmented controls, dragging, keyboard, persistence, capture prompt/cancel/copy/download, translations and mobile settings.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
