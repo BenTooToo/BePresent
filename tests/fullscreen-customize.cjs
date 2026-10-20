@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
 async function main() {
   const browser=await chromium.launch({channel:'msedge',headless:true});
   try {
-    const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'Asia/Tokyo',permissions:['clipboard-read','clipboard-write']});
+    const context=await browser.newContext({locale:'zh-CN',viewport:{width:1440,height:1000},timezoneId:'Asia/Tokyo',permissions:['clipboard-read','clipboard-write']});
     const page=await context.newPage();
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.clock.setFixedTime(new Date('2026-10-15T12:34:56Z'));
@@ -25,8 +25,8 @@ async function main() {
     assert.equal(await preview.locator('.digital').getAttribute('role'),null);
     await page.locator('[data-enabled="secondHand"]').uncheck();
     assert.equal(await preview.locator('.second').isVisible(),false);
-    await page.locator('#numeral-count').selectOption('4');
-    await page.locator('#numeral-position').selectOption('inside');
+    await page.locator('#numeral-count').selectOption('4',{force:true});
+    await page.locator('#numeral-position').selectOption('inside',{force:true});
     assert.deepEqual(await preview.locator('.dial-numbers text').allTextContents(),['12','3','6','9']);
     assert.equal(await preview.locator('.dial-numbers').getAttribute('data-position'),'inside');
     await page.locator('[data-enabled="country"]').uncheck();
@@ -39,7 +39,7 @@ async function main() {
     await page.clock.setFixedTime(new Date('2026-10-15T12:35:01Z'));
     await page.waitForFunction(()=>document.querySelector('#settings-preview .digital').textContent==='21:35:01');
     assert.equal(await page.locator('#clocks .digital').first().textContent(),worldTime);
-    const last=page.locator('[data-enabled="support"]');
+    const last=page.locator('#developer-options');
     await last.focus();await page.keyboard.press('Tab');
     assert.equal(await page.locator('#settings-close').evaluate(el=>el===document.activeElement),true);
     await page.keyboard.press('Shift+Tab');

@@ -29,6 +29,14 @@
     .capture-status { position:fixed; top:var(--capture-status-top,75svh); left:50%; z-index:100; width:max-content; max-width:calc(100vw - 44px); margin:0; padding:0; border:0; background:transparent; color:#78ce9a; font-size:clamp(12px,1vw,14px); line-height:1.6; font-weight:400; text-align:center; letter-spacing:.04em; opacity:0; transform:translate(-50%,calc(-50% + 12px)); transition:opacity .3s ease,transform .3s ease; pointer-events:none; }
     .capture-status.is-visible { opacity:1; transform:translate(-50%,-50%); }
     .capture-status[data-state=error] { color:#ed8080; }
+    #capture-preview { width:min(92vw,460px); max-height:90svh; padding:20px; border:1px solid #333; border-radius:12px; background:#111; color:#eee; }
+    #capture-preview::backdrop { background:#000b; }
+    #capture-preview .dialog-head { margin-bottom:16px; }
+    #capture-preview h2 { margin:0; font-size:18px; font-weight:400; }
+    #capture-image { display:block; width:100%; max-height:58svh; object-fit:contain; background:#000; }
+    .capture-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
+    .capture-actions .button { min-height:44px; flex:1; text-align:center; text-decoration:none; }
+    #capture-save-status { margin:12px 0 0; font-size:12px; line-height:1.6; color:#aaa; }
     .add-city { align-self:center; flex-shrink:0; display:grid; place-items:center; width:64px; height:64px; padding:0; margin-bottom:10px; border-radius:6px; font-size:32px; font-weight:300; line-height:1; }
     main { flex:1; display:flex; flex-direction:column; justify-content:center; padding:65px 0 85px; }
     .clock-scroll { flex-shrink:0; overflow-x:auto; scrollbar-color:#333 #000; scrollbar-width:thin; padding:14px 12px 24px; margin:-14px -12px -4px; overscroll-behavior-x:contain; }
@@ -121,6 +129,16 @@
     .clock-options { margin:0 0 8px 5px; padding-left:12px; border-left:1px solid #292929; }
     .clock-options .setting-row, .clock-options .language-field { font-size:12px; color:#929292; min-height:36px; }
     .clock-options select { min-width:80px; }
+    .segmented { --count:2; --index:0; position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(var(--count),minmax(0,1fr)); flex-shrink:0; min-width:140px; padding:3px; border:1px solid #303030; border-radius:7px; background:#101010; touch-action:pan-y; user-select:none; }
+    .segmented::before { content:''; position:absolute; z-index:-1; top:3px; bottom:3px; left:3px; width:calc((100% - 6px)/var(--count)); border-radius:4px; background:#303030; box-shadow:0 1px 3px #0005; transform:translateX(calc(var(--index)*100%)); transition:transform .2s ease; }
+    .segmented label { position:relative; display:grid; place-items:center; min-height:30px; padding:5px 9px; margin:0; color:#777; font-size:11px; line-height:1.5; text-align:center; cursor:pointer; }
+    .segmented label:has(input:checked) { color:#eee; }
+    .segmented label:has(input:focus-visible) { outline:1px solid #aaa; border-radius:4px; outline-offset:0; }
+    .segmented input[type=radio] { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
+    .segmented.dragging::before,.disable-animations .segmented::before { transition:none; }
+    #capture-options .segmented { width:100%; min-width:0; margin:4px 0 10px; }
+    #capture-options .language-field { display:block; }
+    @media(max-width:700px) { .numeral-options .language-field:has(.segmented) { align-items:flex-start; flex-direction:column; padding:6px 0; gap:5px; } .numeral-options .segmented { width:100%; min-width:0; } .segmented label { padding:5px 7px; } }
     .numeral-options { margin:0 0 4px 5px; padding-left:10px; border-left:1px solid #252525; }
     .numeral-options .language-field { gap:8px; }
     .clock-options .numeral-options select { min-width:70px; max-width:65%; }
@@ -298,6 +316,7 @@
           <label class="setting-row"><span><span data-i18n="addButton">加号按钮</span><small data-i18n="bottomHint" data-hint="add" hidden>（鼠标移到底部时显示）</small></span><input type="checkbox" role="switch" data-enabled="add"></label>
           <label class="setting-row"><span><span data-i18n="fullscreenButton">全屏按钮</span><small data-i18n="topHint" data-hint="fullscreen" hidden>（鼠标移到顶部时显示）</small></span><input type="checkbox" role="switch" data-enabled="fullscreen"></label>
           <label class="setting-row"><span data-i18n="cameraButton">相机按钮</span><input type="checkbox" role="switch" data-enabled="camera"></label>
+          <div class="clock-options" id="capture-options"><div class="language-field"><span data-i18n="captureAction">拍摄后</span><select id="capture-action" aria-label="拍摄后"><option value="clipboard" data-i18n="captureClipboard">复制到剪贴板</option><option value="download" data-i18n="captureSave">保存图片</option><option value="ask" data-i18n="captureAsk">每次询问</option></select></div></div>
           <label class="setting-row"><span data-i18n="title">标题</span><input type="checkbox" role="switch" data-enabled="title"></label>
           <label class="setting-row"><span data-i18n="supportButton">赞助按钮</span><input type="checkbox" role="switch" data-enabled="support"></label>
         </fieldset>
@@ -313,11 +332,18 @@
       </div>
       <p class="developer-note"><span data-i18n="developerBefore">如果你喜欢这个时钟，不妨点击</span><a href="https://bentootoo.com/" target="_blank" rel="noopener noreferrer" data-i18n="developerLink">这里</a><span data-i18n="developerAfter">来看一下开发者是谁吧</span></p>
       </div>
-      <div class="settings-footer"><span class="settings-version">v0.1.0</span><label class="developer-mode-toggle"><span data-i18n="developerOptions">开发者选项</span><input type="checkbox" role="switch" id="developer-options" aria-label="开发者选项" aria-controls="experimental-features"></label></div>
+      <div class="settings-footer"><span class="settings-version">v0.2.0</span><label class="developer-mode-toggle"><span data-i18n="developerOptions">开发者选项</span><input type="checkbox" role="switch" id="developer-options" aria-label="开发者选项" aria-controls="experimental-features"></label></div>
       <dialog id="developer-confirm" aria-labelledby="developer-confirm-title" aria-describedby="developer-confirm-message"><h3 id="developer-confirm-title" data-i18n="enableDeveloper">开启开发者选项</h3><p id="developer-confirm-message" data-i18n="developerWarning">开启后会多出很多奇奇怪怪的选项，很可能会有 bug 或者设计不好的地方，请谨慎开启。</p><form method="dialog"><button class="button" value="cancel" autofocus data-i18n="cancelDeveloper">取消</button><button class="button" value="enable" data-i18n="confirmDeveloper">仍然开启</button></form></dialog>
     </section>
   </div>
   <div class="capture-status" id="capture-status" role="status" hidden></div>
+  <dialog id="capture-choice" aria-labelledby="capture-choice-title"><div class="dialog-head"><h2 id="capture-choice-title" data-i18n="captureChoose">如何保存截图？</h2><button class="close" id="capture-choice-close" aria-label="关闭">×</button></div><div class="capture-actions"><button class="button" id="capture-choice-copy" data-i18n="captureClipboard">复制到剪贴板</button><button class="button" id="capture-choice-save" data-i18n="captureSave">保存图片</button></div></dialog>
+  <dialog id="capture-preview" aria-labelledby="capture-preview-title">
+    <div class="dialog-head"><h2 id="capture-preview-title" data-i18n="captureSave">保存图片</h2><button class="close" id="capture-preview-close" aria-label="关闭">×</button></div>
+    <img id="capture-image" alt="">
+    <div class="capture-actions"><button class="button" id="capture-share" data-i18n="captureSave">保存图片</button><a class="button" id="capture-download" data-i18n="captureDownload">下载 PNG</a></div>
+    <p id="capture-save-status" role="status" data-i18n="captureSaveHint">在系统菜单中选择存储图像，或下载 PNG。</p>
+  </dialog>
   <dialog id="picker"><div class="dialog-head"><h2>添加一个城市</h2><button class="close" id="close-picker" aria-label="关闭">×</button></div><input id="search" placeholder="搜索城市或时区，例如：伦敦、Tokyo" aria-label="搜索城市或时区"><div class="city-options" id="options"></div></dialog>
   <script src="assets/vendor/html-to-image-1.11.13.js"></script>
   <script>
@@ -381,6 +407,15 @@
     Object.assign(messages.zh,{cameraButton:'相机按钮',capture:'复制完整截图',captureCopied:'截图已复制到剪贴板',captureUnsupported:'当前浏览器不支持图片复制',captureFailed:'复制失败，请允许剪贴板访问后重试'});
     Object.assign(messages.en,{cameraButton:'Camera button',capture:'Copy full screenshot',captureCopied:'Screenshot copied to clipboard',captureUnsupported:'This browser does not support copying images',captureFailed:'Copy failed. Allow clipboard access and try again.'});
     Object.assign(messages.fr,{cameraButton:'Bouton photo',capture:'Copier la capture complète',captureCopied:'Capture copiée dans le presse-papiers',captureUnsupported:'Ce navigateur ne permet pas de copier des images',captureFailed:'Copie impossible. Autorisez le presse-papiers puis réessayez.'});
+    Object.assign(messages.zh,{captureMobile:'拍摄并保存图片',captureSave:'保存图片',captureDownload:'下载 PNG',captureSaveHint:'在系统菜单中选择存储图像，或下载 PNG。',captureDownloadHint:'图片可长按保存，或下载 PNG 到手机。',captureSaveFailed:'无法打开系统菜单，请长按图片保存或下载 PNG。',captureGenerateFailed:'图片生成失败，请重试。'});
+    Object.assign(messages.en,{captureMobile:'Capture and save image',captureSave:'Save image',captureDownload:'Download PNG',captureSaveHint:'Choose Save Image in the system menu, or download the PNG.',captureDownloadHint:'Touch and hold the image to save it, or download the PNG.',captureSaveFailed:'Could not open the system menu. Touch and hold the image to save it, or download the PNG.',captureGenerateFailed:'Could not create the image. Please try again.'});
+    Object.assign(messages.fr,{captureMobile:'Capturer et enregistrer',captureSave:'Enregistrer l’image',captureDownload:'Télécharger le PNG',captureSaveHint:'Choisissez Enregistrer l’image dans le menu système, ou téléchargez le PNG.',captureDownloadHint:'Appuyez longuement sur l’image pour l’enregistrer, ou téléchargez le PNG.',captureSaveFailed:'Impossible d’ouvrir le menu système. Appuyez longuement sur l’image ou téléchargez le PNG.',captureGenerateFailed:'Impossible de créer l’image. Réessayez.'});
+    Object.assign(messages.zh,{captureDownloaded:'图片下载已开始'});
+    Object.assign(messages.en,{captureDownloaded:'Image download started'});
+    Object.assign(messages.fr,{captureDownloaded:'Téléchargement de l’image lancé'});
+    Object.assign(messages.zh,{captureAction:'拍摄后',captureClipboard:'复制到剪贴板',captureAsk:'每次询问',captureChoose:'如何保存截图？'});
+    Object.assign(messages.en,{captureAction:'After capture',captureClipboard:'Copy to clipboard',captureAsk:'Ask every time',captureChoose:'How would you like to save the screenshot?'});
+    Object.assign(messages.fr,{captureAction:'Après la capture',captureClipboard:'Copier',captureAsk:'Toujours demander',captureChoose:'Comment enregistrer la capture ?'});
     Object.assign(messages.zh,{localPreview:'当地时间预览'});
     Object.assign(messages.en,{localPreview:'Local time preview'});
     Object.assign(messages.fr,{localPreview:'Aperçu de l’heure locale'});
@@ -419,7 +454,7 @@
     const enabledKeys=['localTime','localTimeText','analog','secondHand','numerals','city','country','digital','date','zone','settings','add','fullscreen','camera','title','support'];
     const browserLanguage=(navigator.language || navigator.languages?.[0] || '').toLowerCase().split(/[-_]/)[0];
     const defaultLanguage=Object.hasOwn(languageOptions,browserLanguage)?browserLanguage:'en';
-    const settings={version:2,language:defaultLanguage,multilingual:false,secondLanguage:'en',thirdLanguage:'',deduplicateTranslations:true,animations:true,mergeTimezones:true,developerMode:false,rightDragReorder:false,autoSort:false,sortBy:'timezone',sortDirection:'asc',enabled:Object.fromEntries(enabledKeys.map(key=>[key,!['country','date'].includes(key)])),numeralCount:12,numeralPosition:'outside'};
+    const settings={version:2,language:defaultLanguage,multilingual:false,secondLanguage:'en',thirdLanguage:'',deduplicateTranslations:true,animations:true,mergeTimezones:true,developerMode:false,rightDragReorder:false,autoSort:false,sortBy:'timezone',sortDirection:'asc',captureAction:'clipboard',enabled:Object.fromEntries(enabledKeys.map(key=>[key,!['country','date'].includes(key)])),numeralCount:12,numeralPosition:'outside'};
     try {
       const saved=JSON.parse(localStorage.getItem('be-present-settings'));
       if (saved && typeof saved==='object') {
@@ -430,6 +465,7 @@
         if(typeof saved.autoSort!=='boolean' && typeof saved.sortingButton==='boolean')settings.autoSort=saved.sortingButton;
         if(['timezone','city'].includes(saved.sortBy))settings.sortBy=saved.sortBy;
         if(['asc','desc'].includes(saved.sortDirection))settings.sortDirection=saved.sortDirection;
+        if(['clipboard','download','ask'].includes(saved.captureAction))settings.captureAction=saved.captureAction;
         for (const key of enabledKeys) {
           if (typeof saved.enabled?.[key]==='boolean') settings.enabled[key]=saved.enabled[key];
           else if (typeof saved.hide?.[key]==='boolean') settings.enabled[key]=!saved.hide[key];
@@ -518,12 +554,18 @@
       document.getElementById('numeral-count').setAttribute('aria-label',t('numeralCount'));
       document.getElementById('numeral-position').value=settings.numeralPosition;
       document.getElementById('numeral-position').setAttribute('aria-label',t('numeralPosition'));
+      document.getElementById('capture-options').hidden=isMobileCapture() || !settings.enabled.camera;
+      document.getElementById('capture-action').value=settings.captureAction;
+      document.getElementById('capture-action').setAttribute('aria-label',t('captureAction'));
+      syncSegments();
       for (const hint of document.querySelectorAll('[data-hint]')) hint.hidden=settings.enabled[hint.dataset.hint];
       settingsToggle.setAttribute('aria-label',t(settingsPanel.hidden?'settings':'closeSettings'));
       document.getElementById('settings-close').setAttribute('aria-label',t('closeSettings'));
       document.getElementById('add').setAttribute('aria-label',t('add'));
-      document.getElementById('capture').setAttribute('aria-label',t('capture'));
-      document.getElementById('capture').title=t('capture');
+      document.getElementById('capture').setAttribute('aria-label',t(isMobileCapture()?'captureMobile':settings.captureAction==='download'?'captureSave':settings.captureAction==='ask'?'cameraButton':'capture'));
+      document.getElementById('capture').title=document.getElementById('capture').getAttribute('aria-label');
+      document.getElementById('capture-preview-close').setAttribute('aria-label',t('close'));
+      document.getElementById('capture-choice-close').setAttribute('aria-label',t('close'));
       const fullscreen=document.getElementById('fullscreen');
       fullscreen.setAttribute('aria-label',t(document.fullscreenElement?'exitFullscreen':'fullscreen'));fullscreen.title=fullscreen.getAttribute('aria-label');
       picker.querySelector('h2').textContent=t('addTitle');
@@ -593,12 +635,57 @@
         applySettings();
       };
     }
-    for(const [id,key] of [['sort-by','sortBy'],['sort-direction','sortDirection']]) {
+    for(const [id,key] of [['sort-by','sortBy'],['sort-direction','sortDirection'],['capture-action','captureAction']]) {
       document.getElementById(id).onchange=event=>{settings[key]=event.target.value;applySettings();};
     }
     for (const input of document.querySelectorAll('[data-enabled]')) input.onchange=()=>{settings.enabled[input.dataset.enabled]=input.checked;applySettings();};
     document.getElementById('numeral-count').onchange=event=>{settings.numeralCount=Number(event.target.value);applySettings();};
     document.getElementById('numeral-position').onchange=event=>{settings.numeralPosition=event.target.value;applySettings();};
+    function syncSegments() {
+      for(const group of document.querySelectorAll('.segmented')) {
+        const select=document.getElementById(group.dataset.select);
+        const index=[...select.options].findIndex(option=>option.value===select.value);
+        group.style.setProperty('--index',Math.max(0,index));
+        group.setAttribute('aria-label',select.getAttribute('aria-label'));
+        for(const [i,input] of [...group.querySelectorAll('input')].entries()) {
+          input.checked=i===index;
+          input.nextElementSibling.textContent=select.options[i].textContent;
+        }
+      }
+    }
+    for(const id of ['numeral-count','numeral-position','sort-by','sort-direction','capture-action']) {
+      const select=document.getElementById(id);
+      if(select.parentElement.tagName==='LABEL') {
+        const original=select.parentElement,field=document.createElement('div');field.className=original.className;field.id=original.id;
+        original.replaceWith(field);field.append(...original.childNodes);
+      }
+      const group=document.createElement('div');group.className='segmented';group.dataset.select=id;group.setAttribute('role','radiogroup');group.style.setProperty('--count',select.options.length);
+      // Keep the select as the settings value source; radios provide the visible controls.
+      select.hidden=true;select.setAttribute('aria-hidden','true');select.tabIndex=-1;select.after(group);
+      for(const option of select.options) {
+        const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');
+        input.type='radio';input.name=`segment-${id}`;input.value=option.value;input.checked=option.selected;text.textContent=option.textContent;
+        input.onchange=()=>{if(input.checked){select.value=input.value;select.dispatchEvent(new Event('change',{bubbles:true}));}};
+        label.append(input,text);group.append(label);
+      }
+      let drag=null;
+      group.addEventListener('pointerdown',event=>{if(event.button===0)drag={id:event.pointerId,x:event.clientX,index:select.selectedIndex,moved:false};});
+      group.addEventListener('pointermove',event=>{
+        if(!drag || drag.id!==event.pointerId)return;
+        if(!drag.moved && Math.abs(event.clientX-drag.x)<6)return;
+        drag.moved=true;group.classList.add('dragging');group.setPointerCapture(event.pointerId);
+        const rect=group.getBoundingClientRect();
+        drag.index=Math.max(0,Math.min(select.options.length-1,Math.floor((event.clientX-rect.left)/rect.width*select.options.length)));
+        group.style.setProperty('--index',drag.index);
+      });
+      group.addEventListener('pointerup',event=>{
+        if(!drag || drag.id!==event.pointerId)return;
+        const previous=drag;drag=null;group.classList.remove('dragging');
+        if(group.hasPointerCapture(event.pointerId))group.releasePointerCapture(event.pointerId);
+        if(previous.moved) {select.selectedIndex=previous.index;select.dispatchEvent(new Event('change',{bubbles:true}));}
+      });
+      for(const type of ['pointercancel','lostpointercapture'])group.addEventListener(type,()=>{drag=null;group.classList.remove('dragging');syncSegments();});
+    }
     async function rasterizeSnapshotSVG(snapshot) {
       const properties=['fill','fill-opacity','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','font-family','font-size','font-weight','text-anchor','dominant-baseline','opacity','display','visibility'];
       for (const svg of snapshot.querySelectorAll('svg')) {
@@ -679,23 +766,90 @@
     captureLayoutObserver.observe(document.getElementById('clocks'));
     let captureStatusTimer;
     let captureHideTimer;
-    captureButton.onclick=async()=>{
+    function isMobileCapture() {
+      return navigator.userAgentData?.mobile===true || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    }
+    const capturePreview=document.getElementById('capture-preview');
+    const captureShare=document.getElementById('capture-share');
+    const captureDownload=document.getElementById('capture-download');
+    const captureSaveStatus=document.getElementById('capture-save-status');
+    let captureFile;
+    let captureImageURL;
+    function canShareCapture() {
+      try {return !!(captureFile && navigator.share && navigator.canShare?.({files:[captureFile]}));} catch {return false;}
+    }
+    async function shareCapture() {
+      if(!canShareCapture() || captureShare.disabled)return;
+      captureShare.disabled=true;
+      try {
+        await navigator.share({files:[captureFile]});
+        captureSaveStatus.textContent=t('captureSaveHint');
+      } catch(error) {
+        if(error.name!=='AbortError')captureSaveStatus.textContent=t('captureSaveFailed');
+      } finally {captureShare.disabled=false;}
+    }
+    captureShare.onclick=shareCapture;
+    document.getElementById('capture-preview-close').onclick=()=>capturePreview.close();
+    capturePreview.addEventListener('close',()=>{
+      if(captureImageURL)URL.revokeObjectURL(captureImageURL);
+      captureImageURL=null;captureFile=null;
+      document.getElementById('capture-image').removeAttribute('src');captureDownload.removeAttribute('href');
+    });
+    async function saveMobileCapture(blob) {
+      captureFile=new File([blob],`be-present-${new Date().toISOString().replace(/[:.]/g,'-')}.png`,{type:'image/png'});
+      captureImageURL=URL.createObjectURL(blob);
+      document.getElementById('capture-image').src=captureImageURL;
+      captureDownload.href=captureImageURL;captureDownload.download=captureFile.name;
+      captureShare.hidden=!canShareCapture();
+      captureSaveStatus.textContent=t(captureShare.hidden?'captureDownloadHint':'captureSaveHint');
+      capturePreview.showModal();
+      if(!captureShare.hidden && navigator.userActivation?.isActive!==false)await shareCapture();
+      else if(captureShare.hidden)captureDownload.click();
+    }
+    const captureChoice=document.getElementById('capture-choice');
+    document.getElementById('capture-choice-close').onclick=()=>captureChoice.close();
+    document.getElementById('capture-choice-copy').onclick=()=>{captureChoice.close();performCapture('clipboard');};
+    document.getElementById('capture-choice-save').onclick=()=>{captureChoice.close();performCapture('download');};
+    captureButton.onclick=()=>{
+      if(captureButton.disabled)return;
+      if(!isMobileCapture() && settings.captureAction==='ask'){captureChoice.showModal();return;}
+      performCapture(settings.captureAction);
+    };
+    async function performCapture(action) {
       if(captureButton.disabled)return;
       clearTimeout(captureStatusTimer);clearTimeout(captureHideTimer);captureStatus.classList.remove('is-visible');captureStatus.hidden=true;
       captureButton.disabled=true;captureButton.setAttribute('aria-busy','true');
       let imagePromise;
+      const mobile=isMobileCapture();
+      const downloading=action==='download';
       try {
+        if(mobile) {
+          imagePromise=createScreenshotBlob();
+          await saveMobileCapture(await imagePromise);
+          return;
+        }
+        if(downloading) {
+          imagePromise=createScreenshotBlob();
+          const imageURL=URL.createObjectURL(await imagePromise);
+          const link=document.createElement('a');
+          link.href=imageURL;link.download=`be-present-${new Date().toISOString().replace(/[:.]/g,'-')}.png`;
+          document.body.append(link);link.click();link.remove();
+          setTimeout(()=>URL.revokeObjectURL(imageURL),60000);
+          captureStatus.textContent=t('captureDownloaded');captureStatus.dataset.state='success';
+          return;
+        }
         if (!navigator.clipboard?.write || typeof ClipboardItem==='undefined') throw new Error('ClipboardUnsupported');
         imagePromise=createScreenshotBlob();imagePromise.catch(()=>{});
         await navigator.clipboard.write([new ClipboardItem({'image/png':imagePromise})]);
         captureStatus.textContent=t('captureCopied');
         captureStatus.dataset.state='success';
       } catch (error) {
-        captureStatus.textContent=t(error.message==='ClipboardUnsupported'?'captureUnsupported':'captureFailed');
+        captureStatus.textContent=t(mobile || downloading?'captureGenerateFailed':error.message==='ClipboardUnsupported'?'captureUnsupported':'captureFailed');
         captureStatus.dataset.state='error';
       } finally {
         if (imagePromise) await imagePromise.catch(()=>{});
         captureButton.disabled=false;captureButton.removeAttribute('aria-busy');
+        if(mobile && capturePreview.open)return;
         captureStatus.hidden=false;
         positionCaptureStatus();
         void captureStatus.offsetWidth;
