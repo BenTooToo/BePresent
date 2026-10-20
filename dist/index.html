@@ -379,6 +379,8 @@
     const options = document.getElementById('options');
     const page = document.querySelector('.page');
     let previewTimestamp = null;
+    let returnAnimation = null;
+    let returnAnimationFrame = null;
     let previewAnchorCityId = null;
     let wheelRemainder = 0;
     let wheelCityId = null;
@@ -971,7 +973,7 @@
       const digital=card.querySelector('.digital'),form=card.querySelector('.time-editor');
       const fields=[...form.querySelectorAll('input')];
       const originalTimestamp=previewTimestamp,originalAnchor=previewAnchorCityId;
-      const reference=previewOnToday(previewTimestamp ?? Date.now(),city);
+      const reference=previewOnToday(displayedTimestamp(),city);
       const parts=Object.fromEntries(formatter(city.zone).time.formatToParts(new Date(reference)).map(part=>[part.type,part.value]));
       fields.forEach((field,index)=>{field.value=parts[['hour','minute','second'][index]];field.setAttribute('aria-invalid','false');});
       timeEdit={city,digital,form,fields,reference,lastValues:fields.map(field=>field.value),wasPreview:originalTimestamp!==null,originalTimestamp,originalAnchor};
@@ -1025,14 +1027,48 @@
     }
     function setPreview(timestamp,snapToMinute=true) {
       if (!Number.isFinite(timestamp) || Math.abs(timestamp)>8640000000000000) return;
+      cancelReturnAnimation();
       previewTimestamp=snapToMinute?Math.floor(timestamp/60000)*60000:Math.floor(timestamp/1000)*1000;
       page.classList.add('is-exploring');
       update();
     }
     function shiftMinutes(minutes) {
-      setPreview((previewTimestamp ?? Date.now())+minutes*60000);
+      setPreview(displayedTimestamp()+minutes*60000);
+    }
+    function displayedTimestamp(realNow=Date.now()) {
+      if(previewTimestamp!==null)return previewTimestamp;
+      if(!returnAnimation)return realNow;
+      const progress=Math.min(1,Math.max(0,(performance.now()-returnAnimation.start)/returnAnimation.duration));
+      return realNow+returnAnimation.offset*Math.pow(1-progress,3);
+    }
+    function cancelReturnAnimation() {
+      if(returnAnimationFrame!==null)cancelAnimationFrame(returnAnimationFrame);
+      returnAnimationFrame=null;
+      returnAnimation=null;
+    }
+    function animateReturn() {
+      returnAnimationFrame=null;
+      if(!returnAnimation)return;
+      if(!animationsEnabled() || performance.now()-returnAnimation.start>=returnAnimation.duration) {
+        returnAnimation=null;
+        update();
+        return;
+      }
+      update();
+      returnAnimationFrame=requestAnimationFrame(animateReturn);
     }
     function resetPreview() {
+      if(previewTimestamp===null)return;
+      const realNow=Date.now();
+      // Digital time repeats every 24 hours; choose the shorter route around midnight.
+      const day=86400000;
+      const difference=previewTimestamp-realNow;
+      const offset=((difference+day/2)%day+day)%day-day/2;
+      cancelReturnAnimation();
+      if(animationsEnabled() && Math.abs(offset)>=1) {
+        returnAnimation={offset,start:performance.now(),duration:Math.min(2200,700+Math.sqrt(Math.abs(offset)/3600000)*420)};
+        returnAnimationFrame=requestAnimationFrame(animateReturn);
+      }
       previewTimestamp=null;
       previewAnchorCityId=null;
       wheelRemainder=0;
@@ -1047,7 +1083,7 @@
       update();
     }
     function stepTimeGrid(steps,zone,city=cities.find(item=>item.zone===zone)) {
-      const previous=previewTimestamp ?? activeDrag?.baseTime ?? Date.now();
+      const previous=previewTimestamp ?? activeDrag?.baseTime ?? displayedTimestamp();
       const offset=localTimestamp(zone,previous)-Math.floor(previous/1000)*1000;
       const position=(previous+offset)/300000;
       const target=((steps>0?Math.floor(position):Math.ceil(position))+steps)*300000-offset;
@@ -1078,7 +1114,7 @@
         if (event.button!==0 || event.isPrimary===false || activeDrag || picker.open || event.target.closest('button,.time-area')) return;
         wheelRemainder=0;
         wheelCityId=null;
-        activeDrag={card,city,pointerId:event.pointerId,startY:event.clientY,baseTime:previewTimestamp ?? Math.floor(Date.now()/60000)*60000,moved:false};
+        activeDrag={card,city,pointerId:event.pointerId,startY:event.clientY,baseTime:previewTimestamp ?? Math.floor(displayedTimestamp()/60000)*60000,moved:false};
         card.setPointerCapture(event.pointerId);
       });
       card.addEventListener('pointermove',event=>{
@@ -1480,7 +1516,7 @@
     }
     function paintClock(card,zone,date,name) {
       const parts=Object.fromEntries(formatter(zone).time.formatToParts(date).map(part=>[part.type,part.value]));
-      const h=Number(parts.hour),m=Number(parts.minute),s=Number(parts.second);
+      const h=Number(parts.hour),m=Number(parts.minute),s=Number(parts.second)+(returnAnimation?date.getMilliseconds()/1000:0);
       card.querySelector('.hour').setAttribute('transform',`rotate(${h*30+m/2+s/120} 120 120)`);
       card.querySelector('.minute').setAttribute('transform',`rotate(${m*6+s/10} 120 120)`);
       card.querySelector('.second').setAttribute('transform',`rotate(${s*6} 120 120)`);
@@ -1504,7 +1540,7 @@
       if(zoneSignature && zoneSignature!==currentZoneSignature()){render();return;}
       const realNow = new Date();
       const exploring = previewTimestamp!==null;
-      const now = exploring ? new Date(previewTimestamp) : realNow;
+      const now = new Date(displayedTimestamp(realNow.getTime()));
       const parisDay = calendarDay('Europe/Paris',now);
       const painted=new Set();
       for (const city of cities) {

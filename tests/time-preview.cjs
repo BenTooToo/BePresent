@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 async function main() {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN' });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.clock.setFixedTime(new Date('2026-10-15T21:50:00Z'));
@@ -15,7 +15,10 @@ async function main() {
     const times = () => page.locator('.digital').evaluateAll(nodes => nodes.map(n => n.textContent));
     const dates = () => page.locator('.digital').evaluateAll(nodes => nodes.map(n => n.dateTime));
     const labels = () => page.locator('.day-change').allTextContents();
-    const reset = async () => page.locator('main').click({position:{x:5,y:5}});
+    const reset = async () => {
+      await page.locator('main').click({position:{x:5,y:5}});
+      await page.waitForFunction(() => returnAnimation===null);
+    };
     assert.equal(await cards.count(), 4);
     assert.deepEqual(await times(), ['23:50:00', '17:50:00', '17:50:00', '05:50:00']);
     const originalWidth = (await cards.first().boundingBox()).width;
@@ -68,6 +71,7 @@ async function main() {
     assert.equal((await times())[0], '23:20:00');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => previewTimestamp), null);
+    await page.waitForFunction(() => returnAnimation===null);
 
     // Horizontal scrolling must remain available for a longer row of clocks.
     await cards.first().dispatchEvent('wheel', { deltaX: 200, deltaY: 1 });
@@ -138,7 +142,7 @@ async function main() {
     await reset();
 
     // A narrow screen fits the clock grid and supports touch time adjustment.
-    const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'zh-CN' });
     const touchPage = await touchContext.newPage();
     await touchPage.clock.setFixedTime(new Date('2026-10-15T21:50:00Z'));
     await touchPage.goto(process.env.CLOCK_TEST_URL || 'http://127.0.0.1:4173/');
