@@ -5,7 +5,7 @@ const {chromium}=require('playwright');
 async function main() {
   const browser=await chromium.launch({channel:'msedge',headless:true});
   try {
-    const context=await browser.newContext({viewport:{width:1440,height:900},permissions:['clipboard-read','clipboard-write']});
+    const context=await browser.newContext({locale:'zh-CN',viewport:{width:1440,height:900},permissions:['clipboard-read','clipboard-write']});
     const page=await context.newPage();
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.clock.setFixedTime(new Date('2026-10-15T21:50:00Z'));

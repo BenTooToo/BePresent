@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 async function main() {
   const browser = await chromium.launch({ channel:'msedge', headless:true });
   try {
-    const page = await browser.newPage({ viewport:{width:1440,height:900} });
+    const page = await browser.newPage({ locale:'zh-CN',viewport:{width:1440,height:900} });
     const errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto('http://127.0.0.1:4173/');
@@ -38,11 +38,11 @@ async function main() {
     assert.equal(await page.locator('#settings-preview .second').isVisible(),false);
     assert.equal(await page.locator('#settings-preview .minute').isVisible(),true);
     await page.locator('[data-enabled="secondHand"]').check();
-    await page.locator('#numeral-count').selectOption('4');
+    await page.locator('#numeral-count').selectOption('4',{force:true});
     for(const dial of await page.locator('.dial').all()) assert.deepEqual(await dial.locator('.dial-numbers text').allTextContents(),['12','3','6','9']);
     const coords=await page.locator('.dial-numbers').first().locator('text').evaluateAll(nodes=>nodes.map(node=>[Number(node.getAttribute('x')),Number(node.getAttribute('y'))]));
     assert.deepEqual(coords,[[120,-16],[256,120],[120,256],[-16,120]]);
-    await page.locator('#numeral-position').selectOption('inside');
+    await page.locator('#numeral-position').selectOption('inside',{force:true});
     for(const dial of await page.locator('.dial').all()) {
       assert.equal(await dial.locator('.dial-numbers').getAttribute('data-position'),'inside');
       const inner=await dial.locator('.dial-numbers text').evaluateAll(nodes=>nodes.map(node=>[Number(node.getAttribute('x')),Number(node.getAttribute('y'))]));
@@ -71,7 +71,7 @@ async function main() {
     await page.locator('#settings-toggle').click();
     assert.equal(await page.locator('#numeral-count').inputValue(),'4');
     assert.equal(await page.locator('#numeral-position').inputValue(),'inside');
-    await page.locator('#numeral-position').selectOption('outside');
+    await page.locator('#numeral-position').selectOption('outside',{force:true});
     assert.equal(await page.locator('[data-enabled="support"]').isChecked(),false);
     await page.locator('#primary-language').selectOption('en');
     assert.equal(await page.locator('#settings-title').textContent(),'Customize');
