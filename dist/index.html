@@ -131,7 +131,9 @@
     .clock-options select { min-width:80px; }
     .segmented { --count:2; --index:0; position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(var(--count),minmax(0,1fr)); flex-shrink:0; min-width:140px; padding:3px; border:1px solid #303030; border-radius:7px; background:#101010; touch-action:pan-y; user-select:none; }
     .segmented::before { content:''; position:absolute; z-index:-1; top:3px; bottom:3px; left:3px; width:calc((100% - 6px)/var(--count)); border-radius:4px; background:#303030; box-shadow:0 1px 3px #0005; transform:translateX(calc(var(--index)*100%)); transition:transform .2s ease; }
-    .segmented label { position:relative; display:grid; place-items:center; min-height:30px; padding:5px 9px; margin:0; color:#777; font-size:11px; line-height:1.5; text-align:center; cursor:pointer; }
+    .segmented label { position:relative; display:grid; place-items:center; min-width:0; min-height:30px; padding:5px 9px; margin:0; color:#777; font-size:11px; line-height:1.5; text-align:center; cursor:pointer; overflow:hidden; }
+    .segmented label { grid-template-columns:minmax(0,1fr); }
+    .segmented label > span { display:block; width:max-content; white-space:nowrap; transform:scale(var(--text-scale,1)); transform-origin:center; }
     .segmented label:has(input:checked) { color:#eee; }
     .segmented label:has(input:focus-visible) { outline:1px solid #aaa; border-radius:4px; outline-offset:0; }
     .segmented input[type=radio] { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
@@ -316,7 +318,7 @@
           <label class="setting-row"><span><span data-i18n="addButton">加号按钮</span><small data-i18n="bottomHint" data-hint="add" hidden>（鼠标移到底部时显示）</small></span><input type="checkbox" role="switch" data-enabled="add"></label>
           <label class="setting-row"><span><span data-i18n="fullscreenButton">全屏按钮</span><small data-i18n="topHint" data-hint="fullscreen" hidden>（鼠标移到顶部时显示）</small></span><input type="checkbox" role="switch" data-enabled="fullscreen"></label>
           <label class="setting-row"><span data-i18n="cameraButton">相机按钮</span><input type="checkbox" role="switch" data-enabled="camera"></label>
-          <div class="clock-options" id="capture-options"><div class="language-field"><span data-i18n="captureAction">拍摄后</span><select id="capture-action" aria-label="拍摄后"><option value="clipboard" data-i18n="captureClipboard">复制到剪贴板</option><option value="download" data-i18n="captureSave">保存图片</option><option value="ask" data-i18n="captureAsk">每次询问</option></select></div></div>
+          <div class="clock-options" id="capture-options"><div class="language-field"><span data-i18n="captureAction">拍摄后</span><select id="capture-action" aria-label="拍摄后"><option value="clipboard" data-i18n="captureClipboardShort">剪切板</option><option value="download" data-i18n="captureSaveShort">保存</option><option value="ask" data-i18n="captureAsk">每次询问</option></select></div></div>
           <label class="setting-row"><span data-i18n="title">标题</span><input type="checkbox" role="switch" data-enabled="title"></label>
           <label class="setting-row"><span data-i18n="supportButton">赞助按钮</span><input type="checkbox" role="switch" data-enabled="support"></label>
         </fieldset>
@@ -416,6 +418,9 @@
     Object.assign(messages.zh,{captureAction:'拍摄后',captureClipboard:'复制到剪贴板',captureAsk:'每次询问',captureChoose:'如何保存截图？'});
     Object.assign(messages.en,{captureAction:'After capture',captureClipboard:'Copy to clipboard',captureAsk:'Ask every time',captureChoose:'How would you like to save the screenshot?'});
     Object.assign(messages.fr,{captureAction:'Après la capture',captureClipboard:'Copier',captureAsk:'Toujours demander',captureChoose:'Comment enregistrer la capture ?'});
+    Object.assign(messages.zh,{captureClipboardShort:'剪切板',captureSaveShort:'保存'});
+    Object.assign(messages.en,{captureClipboardShort:'Clipboard',captureSaveShort:'Save'});
+    Object.assign(messages.fr,{captureClipboardShort:'Copier',captureSaveShort:'Enregistrer'});
     Object.assign(messages.zh,{localPreview:'当地时间预览'});
     Object.assign(messages.en,{localPreview:'Local time preview'});
     Object.assign(messages.fr,{localPreview:'Aperçu de l’heure locale'});
@@ -641,6 +646,14 @@
     for (const input of document.querySelectorAll('[data-enabled]')) input.onchange=()=>{settings.enabled[input.dataset.enabled]=input.checked;applySettings();};
     document.getElementById('numeral-count').onchange=event=>{settings.numeralCount=Number(event.target.value);applySettings();};
     document.getElementById('numeral-position').onchange=event=>{settings.numeralPosition=event.target.value;applySettings();};
+    function fitSegmentText(group) {
+      if(!group.clientWidth)return;
+      for(const label of group.querySelectorAll('label')) {
+        const text=label.querySelector('span'),style=getComputedStyle(label);
+        const available=Math.max(0,label.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight));
+        text.style.setProperty('--text-scale',Math.min(1,available/Math.max(1,text.offsetWidth)));
+      }
+    }
     function syncSegments() {
       for(const group of document.querySelectorAll('.segmented')) {
         const select=document.getElementById(group.dataset.select);
@@ -651,8 +664,10 @@
           input.checked=i===index;
           input.nextElementSibling.textContent=select.options[i].textContent;
         }
+        fitSegmentText(group);
       }
     }
+    const segmentResizeObserver=new ResizeObserver(entries=>{for(const entry of entries)fitSegmentText(entry.target);});
     for(const id of ['numeral-count','numeral-position','sort-by','sort-direction','capture-action']) {
       const select=document.getElementById(id);
       if(select.parentElement.tagName==='LABEL') {
@@ -668,6 +683,7 @@
         input.onchange=()=>{if(input.checked){select.value=input.value;select.dispatchEvent(new Event('change',{bubbles:true}));}};
         label.append(input,text);group.append(label);
       }
+      segmentResizeObserver.observe(group);
       let drag=null;
       group.addEventListener('pointerdown',event=>{if(event.button===0)drag={id:event.pointerId,x:event.clientX,index:select.selectedIndex,moved:false};});
       group.addEventListener('pointermove',event=>{
@@ -686,6 +702,7 @@
       });
       for(const type of ['pointercancel','lostpointercapture'])group.addEventListener(type,()=>{drag=null;group.classList.remove('dragging');syncSegments();});
     }
+    document.fonts.ready.then(()=>{for(const group of document.querySelectorAll('.segmented'))fitSegmentText(group);});
     async function rasterizeSnapshotSVG(snapshot) {
       const properties=['fill','fill-opacity','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','font-family','font-size','font-weight','text-anchor','dominant-baseline','opacity','display','visibility'];
       for (const svg of snapshot.querySelectorAll('svg')) {

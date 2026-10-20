@@ -10,6 +10,7 @@ const {chromium,devices}=require('playwright');
     await page.locator('#settings-toggle').click();
     assert.equal(await page.locator('.settings-version').textContent(),'v0.2.0');
     const group=page.locator('[data-select="capture-action"]');
+    assert.deepEqual(await group.locator('label > span').allTextContents(),['剪切板','保存','每次询问']);
     assert.equal(await group.getByRole('radio').count(),3);
     assert.equal(await group.getByRole('radio',{checked:true}).inputValue(),'clipboard');
     const camera=await page.locator('[data-enabled="camera"]').boundingBox();
@@ -61,12 +62,20 @@ const {chromium,devices}=require('playwright');
     await page.locator('#settings-toggle').click();
     for(const language of ['zh','en','fr']) {
       await page.locator('#primary-language').selectOption(language);
+      for(const width of [280,320,390,480,768,1024,1440,2560]) {
+        await page.setViewportSize({width,height:1000});
+        await page.waitForFunction(()=>[...document.querySelectorAll('.segmented')].filter(group=>group.clientWidth).every(group=>[...group.querySelectorAll('label')].every(label=>{
+          const text=label.querySelector('span'),bounds=label.getBoundingClientRect(),textBounds=text.getBoundingClientRect();
+          return getComputedStyle(text).whiteSpace==='nowrap' && textBounds.left>=bounds.left-1 && textBounds.right<=bounds.right+1;
+        })));
+      }
       for(const id of ['capture-action','numeral-count','numeral-position']) {
         const segment=page.locator(`[data-select="${id}"]`);
         assert.equal(await segment.getByRole('radio',{checked:true}).count(),1);
         assert.equal(await segment.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,`${language}: ${id} fits`);
       }
     }
+    await page.setViewportSize({width:1440,height:1000});
     await page.locator('#primary-language').selectOption('zh');
     await page.locator('[data-select="numeral-count"] label').first().click();
     assert.equal(await page.evaluate(()=>settings.numeralCount),4);
