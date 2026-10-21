@@ -1,0 +1,35 @@
+{
+  "name": "be-present",
+  "productName": "Be Present",
+  "version": "0.3.1",
+  "description": "Be Present desktop world clock",
+  "author": "BenTooToo",
+  "private": true,
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "desktop": "electron .",
+    "desktop:build": "electron-builder --win portable --x64",
+    "test:desktop": "node tests/desktop.cjs"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
+    "playwright": "1.64.1"
+  },
+  "build": {
+    "appId": "com.bentootoo.bepresent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**",
+      "dist/**",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icons/app-512.png",
+      "target": "portable",
+      "artifactName": "Be-Present-${version}-Windows.${ext}"
+    }
+  }
+}
